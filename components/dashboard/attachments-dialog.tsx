@@ -19,8 +19,6 @@ export function AttachmentsDialog({ open, onOpenChange, homework, canAddHomework
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [loading, setLoading] = useState(true)
   const [showUploader, setShowUploader] = useState(false)
-  const { user } = useAuth() // Use useAuth hook
-  const isAdmin = user?.role === "admin"
 
   useEffect(() => {
     if (open) {
