@@ -93,6 +93,61 @@ export async function createUser(formData: FormData) {
   return { success: true }
 }
 
+
+export async function getScholiumMembers(scholiumId: number) {
+  await requireAdmin()
+
+  const result = await sql`
+    SELECT 
+      sm.id,
+      sm.user_id,
+      sm.scholium_id,
+      sm.is_host,
+      sm.can_add_homework,
+      sm.can_create_subject,
+      sm.joined_at,
+      u.name as user_name,
+      u.email as user_email,
+      u.role as user_role
+    FROM scholium_members sm
+    LEFT JOIN users u ON sm.user_id = u.id
+    WHERE sm.scholium_id = ${scholiumId}
+    ORDER BY sm.is_host DESC, sm.joined_at ASC
+  `
+  return result
+}
+
+export async function removeScholiumMember(memberId: number) {
+  await requireAdmin()
+
+  await sql`DELETE FROM scholium_members WHERE id = ${memberId}`
+
+  revalidatePath("/admin")
+  return { success: true }
+}
+
+export async function updateScholiumMemberPermissions(
+  memberId: number,
+  permissions: {
+    can_add_homework: boolean
+    can_create_subject: boolean
+  }
+) {
+  await requireAdmin()
+
+  await sql`
+    UPDATE scholium_members 
+    SET 
+      can_add_homework = ${permissions.can_add_homework},
+      can_create_subject = ${permissions.can_create_subject}
+    WHERE id = ${memberId}
+  `
+
+  revalidatePath("/admin")
+  return { success: true }
+}
+
+
 // Subjects are now managed per-scholium, not globally by admins
 
 export async function getAdminStats() {
