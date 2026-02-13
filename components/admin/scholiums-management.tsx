@@ -43,7 +43,6 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
   const [adding, setAdding] = useState(false)
   const [transferringHost, setTransferringHost] = useState(false)
 
-
   async function handleDelete(id: number) {
     setDeleting(true)
     const result = await deleteScholium(id)
@@ -191,13 +190,14 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
                       </AlertDialogAction>
                     </div>
                   </AlertDialogContent>
-                </AlertDialog>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
       <Dialog open={!!viewMembersId} onOpenChange={(open) => {
         if (!open) {
           setViewMembersId(null)
@@ -205,7 +205,6 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
           setSelectedUserId("")
         }
       }}>
-
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Scholium Members</DialogTitle>
@@ -213,7 +212,6 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
               View and manage members of {scholiums.find(s => s.id === viewMembersId)?.name}
             </DialogDescription>
           </DialogHeader>
-          
 
           {!showAddMember && (
             <Button
@@ -269,7 +267,7 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
               </CardContent>
             </Card>
           )}
-
+          
           {loadingMembers ? (
             <div className="py-8 text-center text-muted-foreground">Loading members...</div>
           ) : members.length === 0 ? (
@@ -296,51 +294,49 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
                           </div>
                         </div>
 
-                        <div className="space-y-2 pt-2 border-t"></div>
-                        {!member.is_host && (
-                          <>
-                            <div className="flex items-center justify-between">
-                              <Label htmlFor={`add-homework-${member.id}`} className="text-sm">Can Add Homework</Label>
-                              <Switch
-                                id={`add-homework-${member.id}`}
-                                checked={member.can_add_homework}
-                                onCheckedChange={(checked) => handleTogglePermission(member.id, 'can_add_homework', checked)}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Label htmlFor={`create-subject-${member.id}`} className="text-sm">Can Create Subject</Label>
-                              <Switch
-                                id={`create-subject-${member.id}`}
-                                checked={member.can_create_subject}
-                                onCheckedChange={(checked) => handleTogglePermission(member.id, 'can_create_subject', checked)}
-                              />
-                            </div>
-                          </>
-                        )}
+                        <div className="space-y-2 pt-2 border-t">
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor={`add-homework-${member.id}`} className="text-sm">Can Add Homework</Label>
+                            <Switch
+                              id={`add-homework-${member.id}`}
+                              checked={member.can_add_homework}
+                              onCheckedChange={(checked) => handleTogglePermission(member.id, 'can_add_homework', checked)}
+                              disabled={member.is_host}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor={`create-subject-${member.id}`} className="text-sm">Can Create Subject</Label>
+                            <Switch
+                              id={`create-subject-${member.id}`}
+                              checked={member.can_create_subject}
+                              onCheckedChange={(checked) => handleTogglePermission(member.id, 'can_create_subject', checked)}
+                              disabled={member.is_host}
+                            />
+                          </div>
                           {!member.is_host && (
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleTransferHost(member.id)}
                               disabled={transferringHost}
-                              className="w-full"
+                              className="w-full mt-2"
                             >
                               <RefreshCw className="h-4 w-4 mr-2" />
                               Make Host
                             </Button>
                           )}
+                        </div>
                       </div>
 
-                      {!member.is_host && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveMember(member.id)}
-                          disabled={removingMemberId === member.id}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveMember(member.id)}
+                        disabled={removingMemberId === member.id || member.is_host}
+                        title={member.is_host ? "Cannot remove host" : "Remove member"}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
