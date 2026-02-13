@@ -40,14 +40,10 @@ export function MemberPermissionsManager({
     const member = members.find(m => m.id === memberId)
     if (!member) return
 
-    console.log('[v0] Toggling permission:', { memberId, field, currentValue, member })
-
     const updated = {
       can_add_homework: field === 'can_add_homework' ? !currentValue : (member as any).can_add_homework,
       can_create_subject: field === 'can_create_subject' ? !currentValue : (member as any).can_create_subject,
     }
-
-    console.log('[v0] Updating permissions to:', updated)
 
     // Optimistically update local state
     setMembers(prev => prev.map(m => 
@@ -59,8 +55,6 @@ export function MemberPermissionsManager({
     setUpdating(memberId)
     const result = await updateMemberPermissionsAsHost(memberId, updated)
     setUpdating(null)
-
-    console.log('[v0] Update result:', result)
 
     if (result.success) {
       router.refresh()
