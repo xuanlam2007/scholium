@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Card, CardContent } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Users, Settings, X } from 'lucide-react'
+import { Users, Settings2, X } from 'lucide-react'
 import type { ScholiumMember } from '@/lib/scholium'
 import { useRouter } from 'next/navigation'
 
@@ -116,7 +116,7 @@ export function MemberPermissionsManager({
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Settings className="h-4 w-4" />
+                              <Settings2 className="h-4 w-4" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-64" align="end">
