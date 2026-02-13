@@ -93,7 +93,6 @@ export async function createUser(formData: FormData) {
   return { success: true }
 }
 
-
 export async function getScholiumMembers(scholiumId: number) {
   await requireAdmin()
 
@@ -147,6 +146,54 @@ export async function updateScholiumMemberPermissions(
   return { success: true }
 }
 
+export async function getAllUsersForScholium(scholiumId: number) {
+  await requireAdmin()
+  // Get all users who are NOT already members of this scholium
+
+  const result = await sql`
+    SELECT u.id, u.name, u.email, u.role
+    FROM users u
+    WHERE u.id NOT IN (
+      SELECT user_id FROM scholium_members WHERE scholium_id = ${scholiumId}
+    )
+    AND u.role != 'admin'
+    ORDER BY u.name ASC
+  `
+
+  return result
+}
+
+export async function addMemberToScholium(scholiumId: number, userId: number) {
+  await requireAdmin()
+
+  await sql`
+    INSERT INTO scholium_members (scholium_id, user_id, is_host, can_add_homework, can_create_subject)
+    VALUES (${scholiumId}, ${userId}, false, true, false)
+  `
+  revalidatePath("/admin")
+  return { success: true }
+}
+
+export async function transferScholiumHost(scholiumId: number, newHostMemberId: number) {
+  await requireAdmin()
+  // Remove host from current host
+  await sql`
+    UPDATE scholium_members 
+    SET is_host = false
+    WHERE scholium_id = ${scholiumId} AND is_host = true
+  `
+  // Set new host
+  await sql`
+    UPDATE scholium_members 
+    SET is_host = true, can_add_homework = true, can_create_subject = true
+    WHERE id = ${newHostMemberId}
+  `
+
+  revalidatePath("/admin")
+  
+  return { success: true }
+
+}
 
 // Subjects are now managed per-scholium, not globally by admins
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { deleteScholium, getScholiumMembers, removeScholiumMember, updateScholiumMemberPermissions } from '@/app/actions/admin'
+import { deleteScholium, getScholiumMembers, removeScholiumMember, updateScholiumMemberPermissions, getAllUsersForScholium, addMemberToScholium, transferScholiumHost } from '@/app/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -20,9 +20,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Trash2, Users, Settings, Crown, X } from 'lucide-react'
+import { Trash2, Users, Settings, Crown, X, UserPlus, RefreshCw } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface ScholiumsManagementProps {
   scholiums: any[]
@@ -36,6 +37,12 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
   const [members, setMembers] = useState<any[]>([])
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [removingMemberId, setRemovingMemberId] = useState<number | null>(null)
+  const [showAddMember, setShowAddMember] = useState(false)
+  const [availableUsers, setAvailableUsers] = useState<any[]>([])
+  const [selectedUserId, setSelectedUserId] = useState<string>("")
+  const [adding, setAdding] = useState(false)
+  const [transferringHost, setTransferringHost] = useState(false)
+
 
   async function handleDelete(id: number) {
     setDeleting(true)
@@ -80,6 +87,42 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
         ? { ...m, [field]: value }
         : m
     ))
+  }
+
+  async function handleShowAddMember() {
+    if (!viewMembersId) return
+    setShowAddMember(true)
+    const users = await getAllUsersForScholium(viewMembersId)
+    setAvailableUsers(users as any[])
+  }
+
+  async function handleAddMember() {
+    if (!viewMembersId || !selectedUserId) return
+    setAdding(true)
+    const result = await addMemberToScholium(viewMembersId, parseInt(selectedUserId))
+    if (result.success) {
+      // Reload members
+      const membersList = await getScholiumMembers(viewMembersId)
+      setMembers(membersList as any[])
+      setShowAddMember(false)
+      setSelectedUserId("")
+      // Reload available users
+      const users = await getAllUsersForScholium(viewMembersId)
+      setAvailableUsers(users as any[])
+    }
+    setAdding(false)
+  }
+
+  async function handleTransferHost(memberId: number) {
+    if (!viewMembersId) return
+    setTransferringHost(true)
+    const result = await transferScholiumHost(viewMembersId, memberId)
+    if (result.success) {
+      // Reload members to reflect new host
+      const membersList = await getScholiumMembers(viewMembersId)
+      setMembers(membersList as any[])
+    }
+    setTransferringHost(false)
   }
 
   return (
@@ -155,7 +198,14 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
           ))}
         </div>
       )}
-            <Dialog open={!!viewMembersId} onOpenChange={(open) => !open && setViewMembersId(null)}>
+      <Dialog open={!!viewMembersId} onOpenChange={(open) => {
+        if (!open) {
+          setViewMembersId(null)
+          setShowAddMember(false)
+          setSelectedUserId("")
+        }
+      }}>
+
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Scholium Members</DialogTitle>
@@ -164,6 +214,62 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
             </DialogDescription>
           </DialogHeader>
           
+
+          {!showAddMember && (
+            <Button
+              onClick={handleShowAddMember}
+              className="w-full"
+              variant="outline"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Member
+            </Button>
+          )}
+
+          {showAddMember && (
+            <Card className="bg-muted/50">
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>Select User to Add</Label>
+                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableUsers.length === 0 ? (
+                        <SelectItem value="none" disabled>No users available</SelectItem>
+                      ) : (
+                        availableUsers.map((user) => (
+                          <SelectItem key={user.id} value={user.id.toString()}>
+                            {user.name} ({user.email})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleAddMember}
+                    disabled={!selectedUserId || adding}
+                    className="flex-1"
+                  >
+                    {adding ? 'Adding...' : 'Add Member'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowAddMember(false)
+                      setSelectedUserId("")
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {loadingMembers ? (
             <div className="py-8 text-center text-muted-foreground">Loading members...</div>
           ) : members.length === 0 ? (
@@ -190,8 +296,9 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
                           </div>
                         </div>
 
+                        <div className="space-y-2 pt-2 border-t"></div>
                         {!member.is_host && (
-                          <div className="space-y-2 pt-2 border-t">
+                          <>
                             <div className="flex items-center justify-between">
                               <Label htmlFor={`add-homework-${member.id}`} className="text-sm">Can Add Homework</Label>
                               <Switch
@@ -208,8 +315,20 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
                                 onCheckedChange={(checked) => handleTogglePermission(member.id, 'can_create_subject', checked)}
                               />
                             </div>
-                          </div>
+                          </>
                         )}
+                          {!member.is_host && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleTransferHost(member.id)}
+                              disabled={transferringHost}
+                              className="w-full"
+                            >
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Make Host
+                            </Button>
+                          )}
                       </div>
 
                       {!member.is_host && (
