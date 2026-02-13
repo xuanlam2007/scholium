@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 const TIME_SLOTS = [
   { start: "07:00", end: "08:30", label: "7:00 AM - 8:30 AM" },
   { start: "08:30", end: "10:00", label: "8:30 AM - 10:00 AM" },
+  // Add more time slots as needed
 ]
 
 interface HomeworkTimetableProps {
@@ -28,7 +29,6 @@ interface HomeworkTimetableProps {
 }
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-
 const DAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 export function HomeworkTimetable({ homework: initialHomework, subjects, canAddHomework, isHost, scholiumId }: HomeworkTimetableProps) {
@@ -72,9 +72,7 @@ export function HomeworkTimetable({ homework: initialHomework, subjects, canAddH
         variant: "destructive",
       })
       // Revert to previous value
-
       const newSlots = [...timeSlots]
-      
       newSlots[index] = { ...newSlots[index], [field]: previousValue }
       setTimeSlots(newSlots)
       setEditingField(null)
@@ -145,7 +143,37 @@ export function HomeworkTimetable({ homework: initialHomework, subjects, canAddH
 
   async function addTimeSlot() {
     if (timeSlots.length < 10) {
-      const newSlots = [...timeSlots, { start: "07:00", end: "08:30" }]
+      let newStart = "07:00"
+      let newEnd = "07:45"
+      
+      console.log('Current timeSlots:', timeSlots)
+      
+      if (timeSlots.length > 0) {
+        const lastSlot = timeSlots[timeSlots.length - 1]
+        console.log('Last slot:', lastSlot)
+        
+        const [lastEndHour, lastEndMinute] = lastSlot.end.split(':').map(Number)
+        console.log('Last end time:', lastEndHour, ':', lastEndMinute)
+        
+        // Add 15-minute break
+        let startMinutes = lastEndHour * 60 + lastEndMinute + 15
+        let endMinutes = startMinutes + 45 // 45-minute slot
+        
+        console.log('Calculated start minutes:', startMinutes, 'end minutes:', endMinutes)
+        
+        // Convert back to HH:MM format
+        const startHour = Math.floor(startMinutes / 60)
+        const startMinute = startMinutes % 60
+        const endHour = Math.floor(endMinutes / 60)
+        const endMinute = endMinutes % 60
+        
+        newStart = `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}`
+        newEnd = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`
+        
+        console.log('New time slot:', newStart, '-', newEnd)
+      }
+      
+      const newSlots = [...timeSlots, { start: newStart, end: newEnd }]
       setTimeSlots(newSlots)
       await updateTimeSlots(scholiumId, newSlots)
     }
@@ -159,7 +187,7 @@ export function HomeworkTimetable({ homework: initialHomework, subjects, canAddH
 
   function startEditingSlots() {
     setEditingSlots(true)
-    setTempSlots(timeSlots) // Copy current time slots to tempSlots when editing starts
+    setTempSlots(timeSlots)
   }
 
   function cancelEditingSlots() {

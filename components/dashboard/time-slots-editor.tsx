@@ -34,7 +34,36 @@ export function TimeSlotsEditor({ scholiumId, isHost }: TimeSlotsEditorProps) {
 
   function addSlot() {
     if (slots.length < 10) {
-      setSlots([...slots, { start: '00:00', end: '00:00' }])
+      let newStart = "07:00"
+      let newEnd = "07:45"
+      console.log('Current slots:', slots)
+      
+      if (slots.length > 0) {
+        const lastSlot = slots[slots.length - 1]
+        console.log('Last slot:', lastSlot)
+        
+        const [lastEndHour, lastEndMinute] = lastSlot.end.split(':').map(Number)
+        console.log('Last end time:', lastEndHour, ':', lastEndMinute)
+        
+        // Add 15-minute break
+        let startMinutes = lastEndHour * 60 + lastEndMinute + 15
+        let endMinutes = startMinutes + 45
+        
+        console.log('Calculated start minutes:', startMinutes, 'end minutes:', endMinutes)
+        
+        // Convert back to HH:MM format
+        const startHour = Math.floor(startMinutes / 60)
+        const startMinute = startMinutes % 60
+        const endHour = Math.floor(endMinutes / 60)
+        const endMinute = endMinutes % 60
+        
+        newStart = `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}`
+        newEnd = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`
+        
+        console.log('New time slot:', newStart, '-', newEnd)
+      }
+      
+      setSlots([...slots, { start: newStart, end: newEnd }])
     }
   }
 
