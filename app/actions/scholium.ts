@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth'
 import { sql } from '@/lib/db'
 import { generateAccessId, encryptAccessId, decryptAccessId, type Scholium, type ScholiumMember } from '@/lib/scholium'
 import { cookies } from 'next/headers'
+import { revalidatePath } from 'next/cache'
 
 /**
  * Create a new scholium
@@ -24,10 +25,10 @@ export async function createScholium(name: string): Promise<{ success: boolean; 
 
     const scholium = result[0] as Scholium
 
-    // Add creator as host member
+    // Add creator as host member with full permissions
     await sql`
-      INSERT INTO scholium_members (scholium_id, user_id, is_host)
-      VALUES (${scholium.id}, ${user.id}, true)
+      INSERT INTO scholium_members (scholium_id, user_id, is_host, can_add_homework, can_create_subject)
+      VALUES (${scholium.id}, ${user.id}, true, true, true)
     `
 
     // Set as current scholium
@@ -332,6 +333,107 @@ export async function updateMemberPermissions(
     return { success: true }
   } catch (error) {
     console.error('[v0] Error updating member permissions:', error)
+    return { success: false, error: 'Failed to update permissions' }
+  }
+}
+
+/**
+ * Remove a member from scholium (host only)
+ */
+export async function removeScholiumMemberAsHost(memberId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getSession()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    // Get the member's scholium_id first
+    const memberResult = await sql`
+      SELECT scholium_id, is_host FROM scholium_members WHERE id = ${memberId}
+    `
+
+    if (memberResult.length === 0) {
+      return { success: false, error: 'Member not found' }
+    }
+
+    const member = memberResult[0] as any
+    
+    // Prevent removing hosts
+    if (member.is_host) {
+      return { success: false, error: 'Cannot remove host member' }
+    }
+
+    // Check if current user is host of this scholium
+    const hostCheck = await sql`
+      SELECT id FROM scholium_members 
+      WHERE scholium_id = ${member.scholium_id} AND user_id = ${user.id} AND is_host = true
+    `
+
+    if (hostCheck.length === 0) {
+      return { success: false, error: 'Only hosts can remove members' }
+    }
+
+    // Remove the member
+    await sql`DELETE FROM scholium_members WHERE id = ${memberId}`
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('[v0] Error removing member:', error)
+    return { success: false, error: 'Failed to remove member' }
+  }
+}
+
+/**
+ * Update member permissions (host only)
+ */
+export async function updateMemberPermissionsAsHost(
+  memberId: number,
+  permissions: {
+    can_add_homework: boolean
+    can_create_subject: boolean
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getSession()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    // Get the member's scholium_id
+    const memberResult = await sql`
+      SELECT scholium_id, is_host FROM scholium_members WHERE id = ${memberId}
+    `
+
+    if (memberResult.length === 0) {
+      return { success: false, error: 'Member not found' }
+    }
+
+    const member = memberResult[0] as any
+    
+    // Check if current user is host of this scholium
+    const hostCheck = await sql`
+      SELECT id FROM scholium_members 
+      WHERE scholium_id = ${member.scholium_id} AND user_id = ${user.id} AND is_host = true
+    `
+
+    if (hostCheck.length === 0) {
+      return { success: false, error: 'Only hosts can update permissions' }
+    }
+
+    // Don't allow changing host permissions
+    if (member.is_host) {
+      return { success: false, error: 'Cannot modify host permissions' }
+    }
+
+    await sql`
+      UPDATE scholium_members 
+      SET 
+        can_add_homework = ${permissions.can_add_homework},
+        can_create_subject = ${permissions.can_create_subject}
+      WHERE id = ${memberId}
+    `
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('[v0] Error updating permissions:', error)
     return { success: false, error: 'Failed to update permissions' }
   }
 }

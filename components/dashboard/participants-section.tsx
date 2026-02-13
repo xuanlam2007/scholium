@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button'
 import type { ScholiumMember } from '@/lib/scholium'
 
-interface ParticipantsSectionProps {
+export interface ParticipantsSectionProps {
   members: (ScholiumMember & {
     user_name: string
     user_email: string

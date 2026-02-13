@@ -48,7 +48,7 @@ export default async function DashboardPage() {
           </div>
           <aside className="space-y-6">
             <UpcomingReminders deadlines={upcomingDeadlines} />
-            <ParticipantsSection members={members} />
+            <ParticipantsSection members={members} isHost={isHost} />
           </aside>
         </div>
       </main>
