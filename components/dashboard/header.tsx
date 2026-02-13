@@ -98,55 +98,63 @@ export function DashboardHeader({ user, scholiumId }: DashboardHeaderProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Dialog open={openAccessDialog} onOpenChange={setOpenAccessDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={() => setOpenAccessDialog(true)}>
-                <Grid3X3 className="h-4 w-4" />
-                Access ID
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Scholium Access</DialogTitle>
-                <DialogDescription>
-                  Share this Access ID with others to invite them to your scholium
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 p-3 bg-muted rounded-md font-mono text-sm">
-                    {scholiumDetails?.accessId || "Loading..."}
+
+          {/* Admin's view */}
+          {user.role !== "admin" && (
+            <>
+              <Dialog open={openAccessDialog} onOpenChange={setOpenAccessDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={() => setOpenAccessDialog(true)}>
+                    <Grid3X3 className="h-4 w-4" />
+                    Access ID
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Scholium Access</DialogTitle>
+                    <DialogDescription>
+                      Share this Access ID with others to invite them to your scholium
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 p-3 bg-muted rounded-md font-mono text-sm">
+                        {scholiumDetails?.accessId || "Loading..."}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCopyAccessId}
+                        disabled={!scholiumDetails?.accessId}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    {scholiumDetails?.isHost && (
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={handleRenewAccessId}
+                        disabled={renewing}
+                      >
+                        {renewing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Renew Access ID
+                      </Button>
+                    )}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopyAccessId}
-                    disabled={!scholiumDetails?.accessId}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {scholiumDetails?.isHost && (
-                  <Button
-                    type="button"
-                    className="w-full"
-                    onClick={handleRenewAccessId}
-                    disabled={renewing}
-                  >
-                    {renewing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Renew Access ID
-                  </Button>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-          <Link href="/scholiums">
-            <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-              <Grid3X3 className="h-4 w-4" />
-              Scholiums
-            </Button>
-          </Link>
+                </DialogContent>
+              </Dialog>
+              <Link href="/scholiums">
+                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                  <Grid3X3 className="h-4 w-4" />
+                  Scholiums
+                </Button>
+              </Link>
+            </>
+          )}
+
+
           {user.role === "admin" && (
             <Link href="/admin">
               <Button variant="outline" size="sm" className="gap-2 bg-transparent">
