@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { updateMemberPermissions, removeScholiumMemberAsHost } from '@/app/actions/scholium'
+import { updateMemberPermissionsAsHost, removeScholiumMemberAsHost } from '@/app/actions/scholium'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Card, CardContent } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Users, Loader2, X } from 'lucide-react'
+import { Users, Settings, X } from 'lucide-react'
 import type { ScholiumMember } from '@/lib/scholium'
 import { useRouter } from 'next/navigation'
 
@@ -20,47 +21,53 @@ interface MemberPermissionsManagerProps {
 
 export function MemberPermissionsManager({
   scholiumId,
-  members,
+  members: initialMembers,
   isHost,
   onPermissionsChange,
 }: MemberPermissionsManagerProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [permissionsState, setPermissionsState] = useState<Record<number, { canAddHomework: boolean; canCreateSubject: boolean }>>({})
-  const [saving, setSaving] = useState<number | null>(null)
   const [removingId, setRemovingId] = useState<number | null>(null)
+  const [members, setMembers] = useState(initialMembers)
+  const [updating, setUpdating] = useState<number | null>(null)
 
-  function initializePermissions() {
-    const state: Record<number, { canAddHomework: boolean; canCreateSubject: boolean }> = {}
-    members.forEach((member) => {
-      state[member.user_id] = {
-        canAddHomework: (member as any).can_add_homework ?? true,
-        canCreateSubject: (member as any).can_create_subject ?? false,
-      }
-    })
-    setPermissionsState(state)
-  }
+  // Update local state when props change
+  useState(() => {
+    setMembers(initialMembers)
+  })
 
-  async function handlePermissionChange(userId: number, field: 'canAddHomework' | 'canCreateSubject') {
-    setSaving(userId)
-    const current = permissionsState[userId] || { canAddHomework: true, canCreateSubject: false }
-    const updated = { ...current, [field]: !current[field] }
+  async function handleTogglePermission(memberId: number, field: 'can_add_homework' | 'can_create_subject', currentValue: boolean) {
+    const member = members.find(m => m.id === memberId)
+    if (!member) return
 
-    const result = await updateMemberPermissions(
-      scholiumId,
-      userId,
-      updated.canAddHomework,
-      updated.canCreateSubject
-    )
+    console.log('[v0] Toggling permission:', { memberId, field, currentValue, member })
 
-    setSaving(null)
+    const updated = {
+      can_add_homework: field === 'can_add_homework' ? !currentValue : (member as any).can_add_homework,
+      can_create_subject: field === 'can_create_subject' ? !currentValue : (member as any).can_create_subject,
+    }
+
+    console.log('[v0] Updating permissions to:', updated)
+
+    // Optimistically update local state
+    setMembers(prev => prev.map(m => 
+      m.id === memberId 
+        ? { ...m, [field]: !currentValue } as typeof m
+        : m
+    ))
+
+    setUpdating(memberId)
+    const result = await updateMemberPermissionsAsHost(memberId, updated)
+    setUpdating(null)
+
+    console.log('[v0] Update result:', result)
 
     if (result.success) {
-      setPermissionsState((prev) => ({
-        ...prev,
-        [userId]: updated,
-      }))
+      router.refresh()
       onPermissionsChange?.()
+    } else {
+      // Revert on failure
+      setMembers(initialMembers)
     }
   }
 
@@ -75,7 +82,7 @@ export function MemberPermissionsManager({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => { setOpen(newOpen); if (newOpen) initializePermissions() }}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
           variant="outline"
@@ -87,7 +94,7 @@ export function MemberPermissionsManager({
           Manage Members
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Member Permissions</DialogTitle>
           <DialogDescription>
@@ -95,72 +102,76 @@ export function MemberPermissionsManager({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {members.map((member) => {
-            const perms = permissionsState[member.user_id] || { canAddHomework: true, canCreateSubject: false }
-            return (
-              <Card key={member.id}>
-                <CardContent className="pt-6">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold">{member.user_name}</p>
-                        <p className="text-sm text-muted-foreground">{member.user_email}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-xs font-medium px-2 py-1 rounded bg-primary/10 text-primary">
-                          {member.is_host ? 'Host' : 'Member'}
-                        </div>
-                        {!member.is_host && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveMember(member.id)}
-                            disabled={removingId === member.id}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+        <div className="space-y-2 overflow-y-auto pr-2">
+          {members.map((member) => (
+            <Card key={member.id}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{member.user_name}</p>
+                    <p className="text-sm text-muted-foreground truncate">{member.user_email}</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-xs font-medium px-2 py-1 rounded bg-primary/10 text-primary">
+                      {member.is_host ? 'Host' : 'Member'}
                     </div>
-
+                    
                     {!member.is_host && (
-                      <div className="space-y-2 pt-2 border-t">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            id={`homework-${member.user_id}`}
-                            checked={perms.canAddHomework}
-                            onCheckedChange={() => handlePermissionChange(member.user_id, 'canAddHomework')}
-                            disabled={saving === member.user_id}
-                          />
-                          <Label htmlFor={`homework-${member.user_id}`} className="cursor-pointer">
-                            Can Add Homework
-                          </Label>
-                          {saving === member.user_id && (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            id={`subject-${member.user_id}`}
-                            checked={perms.canCreateSubject}
-                            onCheckedChange={() => handlePermissionChange(member.user_id, 'canCreateSubject')}
-                            disabled={saving === member.user_id}
-                          />
-                          <Label htmlFor={`subject-${member.user_id}`} className="cursor-pointer">
-                            Can Create Subject
-                          </Label>
-                          {saving === member.user_id && (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          )}
-                        </div>
-                      </div>
+                      <>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Settings className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64" align="end">
+                            <div className="space-y-4">
+                              <h4 className="font-medium text-sm">Permissions</h4>
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <Label htmlFor={`homework-${member.id}`} className="text-sm">
+                                    Can Add Homework
+                                  </Label>
+                                  <Switch
+                                    id={`homework-${member.id}`}
+                                    checked={(member as any).can_add_homework}
+                                    onCheckedChange={() => handleTogglePermission(member.id, 'can_add_homework', (member as any).can_add_homework)}
+                                    disabled={updating === member.id}
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <Label htmlFor={`subject-${member.id}`} className="text-sm">
+                                    Can Create Subject
+                                  </Label>
+                                  <Switch
+                                    id={`subject-${member.id}`}
+                                    checked={(member as any).can_create_subject}
+                                    onCheckedChange={() => handleTogglePermission(member.id, 'can_create_subject', (member as any).can_create_subject)}
+                                    disabled={updating === member.id}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                        
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleRemoveMember(member.id)}
+                          disabled={removingId === member.id}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </DialogContent>
     </Dialog>

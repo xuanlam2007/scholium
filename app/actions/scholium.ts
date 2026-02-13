@@ -327,6 +327,7 @@ export async function updateMemberPermissions(
       WHERE scholium_id = ${scholiumId} AND user_id = ${memberId}
     `
 
+    revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {
     console.error('[v0] Error updating member permissions:', error)
@@ -428,6 +429,7 @@ export async function updateMemberPermissionsAsHost(
     `
 
     revalidatePath('/dashboard')
+    revalidatePath('/admin')
     return { success: true }
   } catch (error) {
     console.error('[v0] Error updating permissions:', error)
