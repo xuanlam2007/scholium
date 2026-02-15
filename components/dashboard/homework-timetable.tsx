@@ -615,9 +615,9 @@ function HomeworkCard({ homework, onToggleComplete, onEdit, onDelete, canAddHome
       )}
 
       {/* Homework type tag */}
-      {hw.homework_type && (
-        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
-          {hw.homework_type}
+        {hw.homework_type && (
+          <Badge variant="outline" className="text-xs">
+          {hw.homework_type.charAt(0).toUpperCase() + hw.homework_type.slice(1)}
         </Badge>
       )}
     </div>

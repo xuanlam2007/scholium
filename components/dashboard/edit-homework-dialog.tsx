@@ -105,7 +105,7 @@ export function EditHomeworkDialog({ open, onOpenChange, homework, subjects }: E
                   <SelectContent>
                     {HOMEWORK_TYPES.map((type) => (
                       <SelectItem key={type} value={type}>
-                        {type}
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
                       </SelectItem>
                     ))}
                   </SelectContent>

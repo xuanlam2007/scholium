@@ -5,7 +5,7 @@ const _sql: NeonQueryFunction<false, false> | null = null
 function createSql() {
   const connectionString = process.env.SCHOLIUM_DATABASE_URL
   if (!connectionString) {
-    throw new Error("SCHOLIUM_DATABASE_URL environment variable is not set")
+    throw new Error("DATABASE_URL environment variable is not set")
   }
   return neon(connectionString)
 }
@@ -47,17 +47,16 @@ export type Homework = {
 }
 
 export const HOMEWORK_TYPES = [
-  "Vocabulary Journal",
-  "Essay",
-  "Workbook",
-  "Research Paper",
-  "Presentation",
-  "Lab Report",
-  "Problem Set",
-  "Reading Assignment",
-  "Project",
-  "Quiz Prep",
-  "Other",
+  "assignment",
+  "vocabulary",
+  "essay",
+  "workbook",
+  "project",
+  "quiz",
+  "exam",
+  "presentation",
+  "reading",
+  "other",
 ] as const
 
 export type Attachment = {

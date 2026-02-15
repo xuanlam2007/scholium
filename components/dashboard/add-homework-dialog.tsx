@@ -9,20 +9,13 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  
   DialogFooter,
-
   DialogHeader,
-
   DialogTitle,
-
 } from "@/components/ui/dialog"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-
 import { Label } from "@/components/ui/label"
-
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
@@ -30,9 +23,7 @@ import { Loader2 } from "lucide-react"
 interface AddHomeworkDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-
   subjects: Subject[]
-
   scholiumId: number
 }
 
@@ -42,15 +33,12 @@ export function AddHomeworkDialog({ open, onOpenChange, subjects, scholiumId }: 
   const [selectedDate, setSelectedDate] = useState<string>("")
   const [timeSlots, setTimeSlots] = useState<Array<{ start: string; end: string }>>([])
   const isSubmittingRef = useRef(false)
-
   const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     if (open) {
       loadTimeSlots()
-
     }
-
   }, [open])
 
   async function loadTimeSlots() {
@@ -65,7 +53,6 @@ export function AddHomeworkDialog({ open, onOpenChange, subjects, scholiumId }: 
 
     isSubmittingRef.current = true
     setLoading(true)
-
     setError(null)
 
     try {
@@ -94,12 +81,10 @@ export function AddHomeworkDialog({ open, onOpenChange, subjects, scholiumId }: 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
-
         <DialogHeader>
           <DialogTitle>Add New Homework</DialogTitle>
           <DialogDescription>Create a new homework assignment for students to see.</DialogDescription>
         </DialogHeader>
-
         <form ref={formRef} action={handleSubmit}>
           <div className="space-y-4 py-4">
             {error && <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">{error}</div>}
@@ -124,32 +109,27 @@ export function AddHomeworkDialog({ open, onOpenChange, subjects, scholiumId }: 
                     <SelectValue placeholder="Select a subject" />
                   </SelectTrigger>
                   <SelectContent>
-
                     {subjects.map((subject) => (
                       <SelectItem key={subject.id} value={subject.id.toString()}>
                         {subject.name}
                       </SelectItem>
                     ))}
-
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="homework_type">Homework Type</Label>
                 <Select name="homework_type">
-
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
-
                   <SelectContent>
                     {HOMEWORK_TYPES.map((type) => (
                       <SelectItem key={type} value={type}>
-                        {type}
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
                       </SelectItem>
                     ))}
                   </SelectContent>
-
                 </Select>
               </div>
             </div>
@@ -162,52 +142,43 @@ export function AddHomeworkDialog({ open, onOpenChange, subjects, scholiumId }: 
                 required 
                 onChange={(e) => setSelectedDate(e.target.value)}
               />
-              
             </div>
             <div className="space-y-2">
               <Label htmlFor="subject_time">Subject Time (optional)</Label>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start_time" className="text-xs text-muted-foreground">Start</Label>
-                  <Input
-                    id="start_time"
-                    name="start_time"
-                    type="time"
-                    placeholder="07:00"
-                    disabled={!selectedDate}
-                    onChange={(e) => {
-                      const startTime = e.target.value
-                      const endTimeInput = document.getElementById('end_time') as HTMLInputElement
-                      if (endTimeInput.value && endTimeInput.value <= startTime) {
-                        setError('End time must be after start time')
-                      } else {
-                        setError(null)
-                      }
-                    }}
-                  />
+                  <Select name="start_time" disabled={!selectedDate || timeSlots.length === 0}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select start time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeSlots.map((slot, idx) => (
+                        <SelectItem key={idx} value={slot.start}>
+                          {slot.start}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="end_time" className="text-xs text-muted-foreground">End</Label>
-                  <Input
-                    id="end_time"
-                    name="end_time"
-                    type="time"
-                    placeholder="08:30"
-                    disabled={!selectedDate}
-                    onChange={(e) => {
-                      const endTime = e.target.value
-                      const startTimeInput = document.getElementById('start_time') as HTMLInputElement
-                      if (startTimeInput.value && endTime <= startTimeInput.value) {
-                        setError('End time must be after start time')
-                      } else {
-                        setError(null)
-                      }
-                    }}
-                  />
+                  <Select name="end_time" disabled={!selectedDate || timeSlots.length === 0}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select end time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeSlots.map((slot, idx) => (
+                        <SelectItem key={idx} value={slot.end}>
+                          {slot.end}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                {!selectedDate ? 'Select due date first' : 'Leave empty for no specific time'}
+                {!selectedDate ? 'Select due date first' : timeSlots.length === 0 ? 'No time slots available' : 'Select time slot for this homework'}
               </p>
             </div>
           </div>
