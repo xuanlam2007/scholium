@@ -32,6 +32,8 @@ export function AddHomeworkDialog({ open, onOpenChange, subjects, scholiumId }: 
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string>("")
   const [timeSlots, setTimeSlots] = useState<Array<{ start: string; end: string }>>([])
+  const [selectedStartTime, setSelectedStartTime] = useState<string>("")
+  const [selectedEndTime, setSelectedEndTime] = useState<string>("")
   const isSubmittingRef = useRef(false)
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -44,6 +46,15 @@ export function AddHomeworkDialog({ open, onOpenChange, subjects, scholiumId }: 
   async function loadTimeSlots() {
     const slots = await getTimeSlots(scholiumId)
     setTimeSlots(slots)
+  }
+
+  function handleStartTimeChange(value: string) {
+    setSelectedStartTime(value)
+    // Find the matching time slot and auto-fill end time
+    const slot = timeSlots.find(s => s.start === value)
+    if (slot) {
+      setSelectedEndTime(slot.end)
+    }
   }
 
   async function handleSubmit(formData: FormData) {
@@ -148,7 +159,12 @@ export function AddHomeworkDialog({ open, onOpenChange, subjects, scholiumId }: 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start_time" className="text-xs text-muted-foreground">Start</Label>
-                  <Select name="start_time" disabled={!selectedDate || timeSlots.length === 0}>
+                  <Select 
+                    name="start_time" 
+                    value={selectedStartTime}
+                    onValueChange={handleStartTimeChange}
+                    disabled={!selectedDate || timeSlots.length === 0}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select start time" />
                     </SelectTrigger>
@@ -163,22 +179,18 @@ export function AddHomeworkDialog({ open, onOpenChange, subjects, scholiumId }: 
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="end_time" className="text-xs text-muted-foreground">End</Label>
-                  <Select name="end_time" disabled={!selectedDate || timeSlots.length === 0}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select end time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timeSlots.map((slot, idx) => (
-                        <SelectItem key={idx} value={slot.end}>
-                          {slot.end}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input 
+                    id="end_time" 
+                    name="end_time" 
+                    value={selectedEndTime}
+                    readOnly
+                    className="bg-muted"
+                    placeholder="Auto-filled"
+                  />
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                {!selectedDate ? 'Select due date first' : timeSlots.length === 0 ? 'No time slots available' : 'Select time slot for this homework'}
+                {!selectedDate ? 'Select due date first' : timeSlots.length === 0 ? 'No time slots available' : 'Select start time, end time will be auto-filled'}
               </p>
             </div>
           </div>

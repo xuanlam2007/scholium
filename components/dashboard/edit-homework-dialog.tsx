@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import type { Homework, Subject } from "@/lib/db"
 import { HOMEWORK_TYPES } from "@/lib/db"
 import { updateHomework } from "@/app/actions/homework"
+import { getTimeSlots } from "@/app/actions/scholium"
 import {
   Dialog,
   DialogContent,
@@ -24,12 +25,38 @@ interface EditHomeworkDialogProps {
   onOpenChange: (open: boolean) => void
   homework: Homework
   subjects: Subject[]
+  scholiumId: number
 }
 
-export function EditHomeworkDialog({ open, onOpenChange, homework, subjects }: EditHomeworkDialogProps) {
+export function EditHomeworkDialog({ open, onOpenChange, homework, subjects, scholiumId }: EditHomeworkDialogProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [timeSlots, setTimeSlots] = useState<Array<{ start: string; end: string }>>([])
+  const [selectedStartTime, setSelectedStartTime] = useState<string>(homework.start_time || "")
+  const [selectedEndTime, setSelectedEndTime] = useState<string>(homework.end_time || "")
   const isSubmittingRef = useRef(false)
+
+  useEffect(() => {
+    if (open) {
+      loadTimeSlots()
+      setSelectedStartTime(homework.start_time || "")
+      setSelectedEndTime(homework.end_time || "")
+    }
+  }, [open, homework])
+
+  async function loadTimeSlots() {
+    const slots = await getTimeSlots(scholiumId)
+    setTimeSlots(slots)
+  }
+
+  function handleStartTimeChange(value: string) {
+    setSelectedStartTime(value)
+    // Find the matching time slot and auto-fill end time
+    const slot = timeSlots.find(s => s.start === value)
+    if (slot) {
+      setSelectedEndTime(slot.end)
+    }
+  }
 
   async function handleSubmit(formData: FormData) {
     if (isSubmittingRef.current) return
@@ -116,15 +143,44 @@ export function EditHomeworkDialog({ open, onOpenChange, homework, subjects }: E
               <Label htmlFor="edit-due_date">Due Date</Label>
               <Input id="edit-due_date" name="due_date" type="date" defaultValue={dueDate} required />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-start_time">Class Start Time (24H)</Label>
-                <Input id="edit-start_time" name="start_time" type="time" defaultValue={homework.start_time || ""} />
+            <div className="space-y-2">
+              <Label htmlFor="subject_time">Subject Time (optional)</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start_time" className="text-xs text-muted-foreground">Start</Label>
+                  <Select 
+                    name="start_time" 
+                    value={selectedStartTime} 
+                    onValueChange={handleStartTimeChange}
+                    disabled={timeSlots.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select start time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeSlots.map((slot, idx) => (
+                        <SelectItem key={idx} value={slot.start}>
+                          {slot.start}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="end_time" className="text-xs text-muted-foreground">End</Label>
+                  <Input 
+                    id="end_time" 
+                    name="end_time" 
+                    value={selectedEndTime}
+                    readOnly
+                    className="bg-muted"
+                    placeholder="Auto-filled"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-end_time">Class End Time (24H)</Label>
-                <Input id="edit-end_time" name="end_time" type="time" defaultValue={homework.end_time || ""} />
-              </div>
+              <p className="text-xs text-muted-foreground">
+                {timeSlots.length === 0 ? 'No time slots available' : 'Select start time, end time will be auto-filled'}
+              </p>
             </div>
           </div>
           <DialogFooter>

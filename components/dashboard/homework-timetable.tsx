@@ -146,20 +146,14 @@ export function HomeworkTimetable({ homework: initialHomework, subjects, canAddH
       let newStart = "07:00"
       let newEnd = "07:45"
       
-      console.log('Current timeSlots:', timeSlots)
-      
+      // If there are existing slots, calculate based on the last one
       if (timeSlots.length > 0) {
         const lastSlot = timeSlots[timeSlots.length - 1]
-        console.log('Last slot:', lastSlot)
-        
         const [lastEndHour, lastEndMinute] = lastSlot.end.split(':').map(Number)
-        console.log('Last end time:', lastEndHour, ':', lastEndMinute)
         
-        // Add 15-minute break
+        // Add 15-minute break after last slot
         let startMinutes = lastEndHour * 60 + lastEndMinute + 15
         let endMinutes = startMinutes + 45 // 45-minute slot
-        
-        console.log('Calculated start minutes:', startMinutes, 'end minutes:', endMinutes)
         
         // Convert back to HH:MM format
         const startHour = Math.floor(startMinutes / 60)
@@ -169,8 +163,6 @@ export function HomeworkTimetable({ homework: initialHomework, subjects, canAddH
         
         newStart = `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}`
         newEnd = `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`
-        
-        console.log('New time slot:', newStart, '-', newEnd)
       }
       
       const newSlots = [...timeSlots, { start: newStart, end: newEnd }]
@@ -187,7 +179,7 @@ export function HomeworkTimetable({ homework: initialHomework, subjects, canAddH
 
   function startEditingSlots() {
     setEditingSlots(true)
-    setTempSlots(timeSlots)
+    setTempSlots(timeSlots) // Copy current time slots to tempSlots when editing starts
   }
 
   function cancelEditingSlots() {
@@ -538,6 +530,7 @@ export function HomeworkTimetable({ homework: initialHomework, subjects, canAddH
           onOpenChange={(open) => !open && setEditingHomework(null)}
           homework={editingHomework}
           subjects={subjects}
+          scholiumId={scholiumId}
         />
       )}
     </div>
@@ -615,9 +608,9 @@ function HomeworkCard({ homework, onToggleComplete, onEdit, onDelete, canAddHome
       )}
 
       {/* Homework type tag */}
-        {hw.homework_type && (
-          <Badge variant="outline" className="text-xs">
-          {hw.homework_type.charAt(0).toUpperCase() + hw.homework_type.slice(1)}
+                {hw.homework_type && (
+                  <Badge variant="outline" className="text-xs">
+                    {hw.homework_type.charAt(0).toUpperCase() + hw.homework_type.slice(1)}
         </Badge>
       )}
     </div>

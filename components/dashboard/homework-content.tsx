@@ -62,7 +62,7 @@ export function HomeworkContent({
       />
 
       {viewMode === "list" ? (
-        <HomeworkList homework={filteredHomework} subjects={subjects} canAddHomework={canAddHomework} />
+        <HomeworkList homework={filteredHomework} subjects={subjects} canAddHomework={canAddHomework} scholiumId={scholiumId} />
       ) : (
         <HomeworkTimetable 
           homework={filteredHomework} 

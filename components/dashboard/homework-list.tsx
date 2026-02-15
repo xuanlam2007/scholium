@@ -17,9 +17,10 @@ interface HomeworkListProps {
   homework: Homework[]
   subjects: Subject[]
   canAddHomework: boolean
+  scholiumId: number
 }
 
-export function HomeworkList({ homework, subjects, canAddHomework }: HomeworkListProps) {
+export function HomeworkList({ homework, subjects, canAddHomework, scholiumId }: HomeworkListProps) {
   const [editingHomework, setEditingHomework] = useState<Homework | null>(null)
   const [viewingAttachments, setViewingAttachments] = useState<Homework | null>(null)
 
@@ -222,6 +223,7 @@ export function HomeworkList({ homework, subjects, canAddHomework }: HomeworkLis
           onOpenChange={(open) => !open && setEditingHomework(null)}
           homework={editingHomework}
           subjects={subjects}
+          scholiumId={scholiumId}
         />
       )}
 
