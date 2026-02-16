@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react"
 import type { Homework, Subject } from "@/lib/db"
 import type { ScholiumMember } from "@/lib/scholium"
+import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh"
 import { HomeworkFilters } from "./homework-filters"
 import { HomeworkList } from "./homework-list"
 import { HomeworkTimetable } from "./homework-timetable"
@@ -28,6 +29,9 @@ export function HomeworkContent({
   members,
   onSubjectsChange,
 }: HomeworkContentProps) {
+  // Real-time updates every 3 seconds
+  useRealtimeRefresh(3000)
+
   const [viewMode, setViewMode] = useState<"list" | "timetable">("list")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedSubject, setSelectedSubject] = useState("all")
