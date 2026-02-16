@@ -5,6 +5,7 @@ import { getCurrentScholiumId, getScholiumMembers } from "@/app/actions/scholium
 import { DashboardHeader } from "@/components/dashboard/header"
 import { HomeworkContent } from "@/components/dashboard/homework-content"
 import { UpcomingReminders } from "@/components/dashboard/upcoming-reminders"
+// ParticipantsSection with isHost prop for member management
 import { ParticipantsSection } from "@/components/dashboard/participants-section"
 
 export default async function DashboardPage() {
@@ -12,6 +13,10 @@ export default async function DashboardPage() {
 
   if (!user) {
     redirect("/login")
+  }
+
+  if (user.role === "admin") {
+    redirect("/admin")
   }
 
   const scholiumId = await getCurrentScholiumId()
@@ -28,7 +33,8 @@ export default async function DashboardPage() {
 
   // Check if user is a member and if they're a host
   const userMember = members.find((m) => m.user_id === user.id)
-  const canAddHomework = !!userMember && (userMember.can_add_homework ?? true)
+  const canAddHomework = userMember?.is_host || userMember?.can_add_homework || false
+  const canCreateSubject = userMember?.is_host || userMember?.can_create_subject || false
   const isHost = !!userMember && userMember.is_host
 
   return (
@@ -41,6 +47,7 @@ export default async function DashboardPage() {
               homework={homework} 
               subjects={subjects} 
               canAddHomework={canAddHomework}
+              canCreateSubject={canCreateSubject}
               isHost={isHost}
               scholiumId={scholiumId}
               members={members}

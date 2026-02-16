@@ -11,6 +11,7 @@ interface HomeworkContentProps {
   homework: Homework[]
   subjects: Subject[]
   canAddHomework: boolean
+  canCreateSubject: boolean
   isHost: boolean
   scholiumId: number
   members: (ScholiumMember & { user_name: string; user_email: string })[]
@@ -21,6 +22,7 @@ export function HomeworkContent({
   homework, 
   subjects, 
   canAddHomework, 
+  canCreateSubject,
   isHost,
   scholiumId,
   members,
@@ -49,6 +51,7 @@ export function HomeworkContent({
       <HomeworkFilters
         subjects={subjects}
         canAddHomework={canAddHomework}
+        canCreateSubject={canCreateSubject}
         isHost={isHost}
         scholiumId={scholiumId}
         members={members}

@@ -15,6 +15,7 @@ import type { ScholiumMember } from "@/lib/scholium"
 interface HomeworkFiltersProps {
   subjects: Subject[]
   canAddHomework: boolean
+  canCreateSubject: boolean
   isHost: boolean
   scholiumId: number
   members: (ScholiumMember & { user_name: string; user_email: string })[]
@@ -30,6 +31,7 @@ interface HomeworkFiltersProps {
 export function HomeworkFilters({
   subjects,
   canAddHomework,
+  canCreateSubject,
   isHost,
   scholiumId,
   members,
@@ -95,7 +97,7 @@ export function HomeworkFilters({
 
         <SubjectManager 
           subjects={subjects} 
-          canManageSubjects={isHost}
+          canManageSubjects={canCreateSubject}
           onSubjectsChange={onSubjectsChange}
         />
         {isHost && (
