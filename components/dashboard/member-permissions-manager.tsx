@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { updateMemberPermissionsAsHost, removeScholiumMemberAsHost } from '@/app/actions/scholium'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Card, CardContent } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Users, Settings2, X } from 'lucide-react'
+import { Users, Settings, X } from 'lucide-react'
 import type { ScholiumMember } from '@/lib/scholium'
 import { useRouter } from 'next/navigation'
 
@@ -32,9 +32,9 @@ export function MemberPermissionsManager({
   const [updating, setUpdating] = useState<number | null>(null)
 
   // Update local state when props change
-  useState(() => {
+  useEffect(() => {
     setMembers(initialMembers)
-  })
+  }, [initialMembers])
 
   async function handleTogglePermission(memberId: number, field: 'can_add_homework' | 'can_create_subject', currentValue: boolean) {
     const member = members.find(m => m.id === memberId)
@@ -116,7 +116,7 @@ export function MemberPermissionsManager({
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Settings2 className="h-4 w-4" />
+                              <Settings className="h-4 w-4" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-64" align="end">

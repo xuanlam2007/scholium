@@ -44,6 +44,11 @@ export function HomeworkTimetable({ homework: initialHomework, subjects, canAddH
   const [tempSlots, setTempSlots] = useState<Array<{ start: string; end: string }>>([])
   const { toast } = useToast()
 
+  // Sync local homework state with props when they change
+  useEffect(() => {
+    setHomework(initialHomework)
+  }, [initialHomework])
+
   // Load time slots immediately on mount
   useEffect(() => {
     loadTimeSlots()
@@ -137,9 +142,11 @@ export function HomeworkTimetable({ homework: initialHomework, subjects, canAddH
     
     newSlots[index] = updatedSlot
     setTimeSlots(newSlots)
+    setEditingField(null)
     
-    // Auto-save to database
+    // Update in database
     await updateTimeSlots(scholiumId, newSlots)
+    router.refresh()
     setEditingField(null)
   }
 
@@ -170,6 +177,7 @@ export function HomeworkTimetable({ homework: initialHomework, subjects, canAddH
       const newSlots = [...timeSlots, { start: newStart, end: newEnd }]
       setTimeSlots(newSlots)
       await updateTimeSlots(scholiumId, newSlots)
+      router.refresh()
     }
   }
 
@@ -177,6 +185,7 @@ export function HomeworkTimetable({ homework: initialHomework, subjects, canAddH
     const newSlots = timeSlots.filter((_, i) => i !== index)
     setTimeSlots(newSlots)
     await updateTimeSlots(scholiumId, newSlots)
+    router.refresh()
   }
 
   function startEditingSlots() {

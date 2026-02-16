@@ -151,7 +151,16 @@ export async function getScholiumMembers(scholiumId: number): Promise<(ScholiumM
     if (!user) return []
 
     const result = await sql`
-      SELECT tm.id, tm.scholium_id, tm.user_id, tm.is_host, tm.joined_at, u.name as user_name, u.email as user_email
+      SELECT 
+        tm.id, 
+        tm.scholium_id, 
+        tm.user_id, 
+        tm.is_host, 
+        tm.joined_at, 
+        tm.can_add_homework,
+        tm.can_create_subject,
+        u.name as user_name, 
+        u.email as user_email
       FROM scholium_members tm
       INNER JOIN users u ON tm.user_id = u.id
       WHERE tm.scholium_id = ${scholiumId}
@@ -385,18 +394,17 @@ export async function removeScholiumMemberAsHost(memberId: number): Promise<{ su
  */
 export async function updateMemberPermissionsAsHost(
   memberId: number,
-  permissions: {
-    can_add_homework: boolean
-    can_create_subject: boolean
-  }
+  permissions: { can_add_homework: boolean; can_create_subject: boolean }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const user = await getSession()
-    if (!user) return { success: false, error: 'Not authenticated' }
+    if (!user) {
+      return { success: false, error: 'Not authenticated' }
+    }
 
-    // Get the member's scholium_id
+    // Get the member to check scholium_id
     const memberResult = await sql`
-      SELECT scholium_id, is_host FROM scholium_members WHERE id = ${memberId}
+      SELECT * FROM scholium_members WHERE id = ${memberId}
     `
 
     if (memberResult.length === 0) {
@@ -404,14 +412,16 @@ export async function updateMemberPermissionsAsHost(
     }
 
     const member = memberResult[0] as any
-    
-    // Check if current user is host of this scholium
-    const hostCheck = await sql`
-      SELECT id FROM scholium_members 
-      WHERE scholium_id = ${member.scholium_id} AND user_id = ${user.id} AND is_host = true
+
+    // Check if user is a host of this scholium
+    const hostCheckResult = await sql`
+      SELECT is_host FROM scholium_members
+      WHERE scholium_id = ${member.scholium_id} AND user_id = ${user.id}
     `
 
-    if (hostCheck.length === 0) {
+    const hostCheck = hostCheckResult[0] as { is_host: boolean } | undefined
+
+    if (!hostCheck?.is_host) {
       return { success: false, error: 'Only hosts can update permissions' }
     }
 
