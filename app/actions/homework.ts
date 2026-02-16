@@ -3,21 +3,18 @@
 import { sql, type Homework, type Subject, type Attachment } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { getCurrentScholiumId } from "@/app/actions/scholium"
+import { broadcastChange } from "@/lib/realtime"
 import { revalidatePath } from "next/cache"
-// import { cookies } from "next/headers"
+import { cookies } from "next/headers"
 
-// Fetch subjects
 export async function getSubjects(): Promise<Subject[]> {
   const scholiumId = await getCurrentScholiumId()
   if (!scholiumId) return []
 
   const result = await sql`SELECT * FROM subjects WHERE scholium_id = ${scholiumId} ORDER BY name`
-
   return result as Subject[]
-
 }
 
-// Feth homework with subject details and completion status
 export async function getHomework(): Promise<Homework[]> {
   const user = await getSession()
   if (!user) return []
@@ -101,7 +98,7 @@ export async function createHomework(formData: FormData) {
       ${description || null}, 
       ${subjectId ? Number.parseInt(subjectId) : null}, 
       ${dueDate},
-      ${homeworkType || null},
+      ${homeworkType ? homeworkType.toLowerCase() : null},
       ${startTime || null},
       ${endTime || null},
       ${user.id},
@@ -110,6 +107,7 @@ export async function createHomework(formData: FormData) {
   `
 
   revalidatePath("/dashboard")
+  await broadcastChange(scholiumId, 'homework')
   return { success: true }
 }
 
@@ -124,7 +122,7 @@ export async function updateHomework(id: number, formData: FormData) {
     return { error: "No scholium selected" }
   }
 
-  // Verify homework
+  // Verify homework belongs to this scholium
   const homework = await sql`
     SELECT id FROM homework WHERE id = ${id} AND scholium_id = ${scholiumId}
   `
@@ -158,6 +156,7 @@ export async function updateHomework(id: number, formData: FormData) {
   `
 
   revalidatePath("/dashboard")
+  await broadcastChange(scholiumId, 'homework')
   return { success: true }
 }
 
@@ -172,7 +171,7 @@ export async function deleteHomework(id: number) {
     return { error: "No scholium selected" }
   }
 
-  // Verify homework
+  // Verify homework belongs to this scholium
   const homework = await sql`
     SELECT id FROM homework WHERE id = ${id} AND scholium_id = ${scholiumId}
   `
@@ -184,12 +183,16 @@ export async function deleteHomework(id: number) {
   await sql`DELETE FROM homework WHERE id = ${id}`
 
   revalidatePath("/dashboard")
+  await broadcastChange(scholiumId, 'homework')
   return { success: true }
 }
 
 export async function toggleHomeworkCompletion(homeworkId: number) {
   const user = await getSession()
   if (!user) return { error: "Unauthorized" }
+
+  const scholiumId = await getCurrentScholiumId()
+  if (!scholiumId) return { error: "No scholium selected" }
 
   const existing = await sql`
     SELECT * FROM homework_completion 
@@ -209,6 +212,7 @@ export async function toggleHomeworkCompletion(homeworkId: number) {
   }
 
   revalidatePath("/dashboard")
+  await broadcastChange(scholiumId, 'homework')
   return { success: true }
 }
 
@@ -230,7 +234,7 @@ export async function addAttachment(homeworkId: number, fileName: string, fileUr
     return { error: "No scholium selected" }
   }
 
-  // Verify homework
+  // Verify homework belongs to this scholium
   const homework = await sql`
     SELECT id FROM homework WHERE id = ${homeworkId} AND scholium_id = ${scholiumId}
   `
@@ -259,8 +263,7 @@ export async function deleteAttachment(id: number) {
     return { error: "No scholium selected" }
   }
 
-
-  // Verify attachment's homework
+  // Verify attachment's homework belongs to this scholium
   const attachment = await sql`
     SELECT a.id FROM attachments a
     INNER JOIN homework h ON a.homework_id = h.id
@@ -316,9 +319,10 @@ export async function createSubject(name: string, color: string) {
     `
 
     revalidatePath("/dashboard")
+    await broadcastChange(scholiumId, 'subject')
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error creating subject:', error)
+    console.error('Error creating subject:', error)
     return { error: "Failed to create subject", success: false }
   }
 }
@@ -334,8 +338,7 @@ export async function updateSubject(id: number, name: string, color: string) {
     return { error: "No scholium selected", success: false }
   }
 
-  // Verify subject
-
+  // Verify subject belongs to this scholium
   const subject = await sql`
     SELECT id FROM subjects WHERE id = ${id} AND scholium_id = ${scholiumId}
   `
@@ -356,9 +359,10 @@ export async function updateSubject(id: number, name: string, color: string) {
     `
 
     revalidatePath("/dashboard")
+    await broadcastChange(scholiumId, 'subject')
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error updating subject:', error)
+    console.error('Error updating subject:', error)
     return { error: "Failed to update subject", success: false }
   }
 }
@@ -374,7 +378,7 @@ export async function deleteSubject(id: number) {
     return { error: "No scholium selected", success: false }
   }
 
-  // Check if user has permission to delete subjects (host)
+  // Check if user has permission to delete subjects (must be host)
   const hostCheck = await sql`
     SELECT id FROM scholium_members
     WHERE scholium_id = ${scholiumId} AND user_id = ${user.id} AND is_host = true
@@ -384,8 +388,7 @@ export async function deleteSubject(id: number) {
     return { error: "Only hosts can delete subjects", success: false }
   }
 
-  
-  // Verify subject
+  // Verify subject belongs to this scholium
   const subject = await sql`
     SELECT id FROM subjects WHERE id = ${id} AND scholium_id = ${scholiumId}
   `
@@ -398,9 +401,10 @@ export async function deleteSubject(id: number) {
     await sql`DELETE FROM subjects WHERE id = ${id}`
 
     revalidatePath("/dashboard")
+    await broadcastChange(scholiumId, 'subject')
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error deleting subject:', error)
+    console.error('Error deleting subject:', error)
     return { error: "Failed to delete subject", success: false }
   }
 }

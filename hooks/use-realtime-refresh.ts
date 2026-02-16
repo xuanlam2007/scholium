@@ -3,58 +3,44 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
-/**
- * Hook that automatically refreshes the page data at regular intervals
- * for real-time updates across all users
+/** 
+ * Hook that listens to SSE events and refreshes only when changes occur
+ * This provides instant updates across all users without constant polling
+ * Thanks to ChatGPT suggestion for a more efficient approach than polling every few seconds haha
  */
-export function useRealtimeRefresh(intervalMs: number = 3000) {
+export function useRealtimeRefresh(scholiumId: number) {
   const router = useRouter()
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const eventSourceRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
-    // Function to start the polling interval
-    const startPolling = () => {
-      // Clear any existing interval first
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
+    // Connect to SSE endpoint
+    const eventSource = new EventSource(`/api/realtime/events?scholiumId=${scholiumId}`)
+    eventSourceRef.current = eventSource
 
-      // Refresh immediately
-      router.refresh()
+    eventSource.onopen = () => {
+      console.log('SSE connection established')
+    }
 
-      // Start new interval
-      intervalRef.current = setInterval(() => {
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === 'connected') {
+          return
+        }
+        console.log('Received change event:', data.type)
         router.refresh()
-      }, intervalMs)
-    }
-
-    // Function to stop polling
-    const stopPolling = () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
+      } catch (error) {
+        console.error('Error parsing SSE message:', error)
       }
     }
-
-    // Handle visibility change to pause/resume polling
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopPolling()
-      } else {
-        startPolling()
-      }
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error)
     }
-
-    // Start polling initially
-    startPolling()
-
-    // Listen for visibility changes
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
     // Cleanup
     return () => {
-      stopPolling()
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      console.log('Closing SSE connection')
+      eventSource.close()
+      eventSourceRef.current = null
     }
-  }, [router, intervalMs])
+  }, [scholiumId, router])
 }

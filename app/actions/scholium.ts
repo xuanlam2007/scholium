@@ -1,10 +1,13 @@
 'use server'
 
-import { getSession } from '@/lib/auth'
 import { sql } from '@/lib/db'
-import { generateAccessId, encryptAccessId, decryptAccessId, type Scholium, type ScholiumMember } from '@/lib/scholium'
-import { cookies } from 'next/headers'
+import type { Scholium, ScholiumMember } from '@/lib/scholium'
+import { generateAccessId, encryptAccessId, decryptAccessId } from '@/lib/scholium'
+import { getSession } from '@/lib/auth'
+import { broadcastChange } from '@/lib/realtime'
+import bcrypt from 'bcryptjs'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 
 /**
  * Create a new scholium
@@ -42,7 +45,7 @@ export async function createScholium(name: string): Promise<{ success: boolean; 
 
     return { success: true, data: scholium }
   } catch (error) {
-    console.error('[v0] Error creating scholium:', error)
+    console.error('Error creating scholium:', error)
     return { success: false, error: 'Failed to create scholium' }
   }
 }
@@ -86,15 +89,17 @@ export async function joinScholium(accessId: string): Promise<{ success: boolean
     `
 
     if (existing.length > 0) {
-      // Set as current scholium
-      const cookieStore = await cookies()
-      cookieStore.set('current_scholium_id', scholium.id.toString(), {
-        maxAge: 7 * 24 * 60 * 60,
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-      })
-      return { success: true, data: scholium }
+    // Set as current scholium
+    const cookieStore = await cookies()
+    cookieStore.set('current_scholium_id', scholium.id.toString(), {
+      maxAge: 7 * 24 * 60 * 60,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+    })
+
+    await broadcastChange(scholium.id, 'member')
+    return { success: true, data: scholium }
     }
 
     // Add user as member with default permissions
@@ -114,7 +119,7 @@ export async function joinScholium(accessId: string): Promise<{ success: boolean
 
     return { success: true, data: scholium }
   } catch (error) {
-    console.error('[v0] Error joining scholium:', error)
+    console.error('Error joining scholium:', error)
     return { success: false, error: 'Failed to join scholium' }
   }
 }
@@ -137,7 +142,7 @@ export async function getUserScholiums(): Promise<Scholium[]> {
 
     return result as Scholium[]
   } catch (error) {
-    console.error('[v0] Error fetching scholiums:', error)
+    console.error('Error fetching scholiums:', error)
     return []
   }
 }
@@ -169,7 +174,7 @@ export async function getScholiumMembers(scholiumId: number): Promise<(ScholiumM
 
     return result as (ScholiumMember & { user_name: string; user_email: string })[]
   } catch (error) {
-    console.error('[v0] Error fetching members:', error)
+    console.error('Error fetching members:', error)
     return []
   }
 }
@@ -203,7 +208,7 @@ export async function renewScholiumAccessId(scholiumId: number): Promise<{ succe
 
     return { success: true, newAccessId }
   } catch (error) {
-    console.error('[v0] Error renewing access ID:', error)
+    console.error('Error renewing access ID:', error)
     return { success: false, error: 'Failed to renew access ID' }
   }
 }
@@ -245,7 +250,7 @@ export async function setCurrentScholium(scholiumId: number): Promise<void> {
       sameSite: 'lax',
     })
   } catch (error) {
-    console.error('[v0] Error setting current scholium:', error)
+    console.error('Error setting current scholium:', error)
   }
 }
 
@@ -302,7 +307,7 @@ export async function getScholiumDetails(scholiumId: number): Promise<{
       },
     }
   } catch (error) {
-    console.error('[v0] Error fetching scholium details:', error)
+    console.error('Error fetching scholium details:', error)
     return { success: false, error: 'Failed to fetch scholium' }
   }
 }
@@ -339,7 +344,7 @@ export async function updateMemberPermissions(
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error updating member permissions:', error)
+    console.error('Error updating member permissions:', error)
     return { success: false, error: 'Failed to update permissions' }
   }
 }
@@ -382,9 +387,10 @@ export async function removeScholiumMemberAsHost(memberId: number): Promise<{ su
     await sql`DELETE FROM scholium_members WHERE id = ${memberId}`
 
     revalidatePath('/dashboard')
+    await broadcastChange(member.scholium_id, 'member')
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error removing member:', error)
+    console.error('Error removing member:', error)
     return { success: false, error: 'Failed to remove member' }
   }
 }
@@ -440,9 +446,10 @@ export async function updateMemberPermissionsAsHost(
 
     revalidatePath('/dashboard')
     revalidatePath('/admin')
+    await broadcastChange(member.scholium_id, 'permissions')
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error updating permissions:', error)
+    console.error('Error updating permissions:', error)
     return { success: false, error: 'Failed to update permissions' }
   }
 }
@@ -481,9 +488,10 @@ export async function updateTimeSlots(
       WHERE id = ${scholiumId}
     `
 
+    await broadcastChange(scholiumId, 'timeslots')
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error updating time slots:', error)
+    console.error('Error updating time slots:', error)
     return { success: false, error: 'Failed to update time slots' }
   }
 }
@@ -531,7 +539,7 @@ export async function getTimeSlots(
     
     return slots
   } catch (error) {
-    console.error('[v0] Error fetching time slots:', error)
+    console.error('Error fetching time slots:', error)
     // Return default 6 slots on error
     return [
       { start: '07:00', end: '08:30' },

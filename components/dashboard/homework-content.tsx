@@ -29,8 +29,8 @@ export function HomeworkContent({
   members,
   onSubjectsChange,
 }: HomeworkContentProps) {
-  // Real-time updates every 3 seconds
-  useRealtimeRefresh(3000)
+  // Enable real-time updates via SSE
+  useRealtimeRefresh(scholiumId)
 
   const [viewMode, setViewMode] = useState<"list" | "timetable">("list")
   const [searchQuery, setSearchQuery] = useState("")
