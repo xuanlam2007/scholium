@@ -1,26 +1,12 @@
-import { neon, type NeonQueryFunction } from "@neondatabase/serverless"
-
-const _sql: NeonQueryFunction<false, false> | null = null
-
-function createSql() {
-  const connectionString = process.env.SCHOLIUM_DATABASE_URL
-  if (!connectionString) {
-    throw new Error("DATABASE_URL environment variable is not set")
-  }
-  return neon(connectionString)
-}
-
-export const sql = (strings: TemplateStringsArray, ...values: any[]) => {
-  const db = createSql()
-  return db(strings, ...values)
-}
-
+// Type definitions for database entities
+// This file only contains types - no server or client imports
+// Server components/actions should use: import { createClient } from "@/lib/supabase/server"
+// Client components should use: import { createClient } from "@/lib/supabase/client"
 export type User = {
-  id: number
+  id: string // Changed from number to string for UUID
   email: string
   name: string
   role: "admin" | "student"
-  email_verified: boolean
   created_at: string
 }
 
@@ -28,6 +14,7 @@ export type Subject = {
   id: number
   name: string
   color: string
+  scholium_id?: number
 }
 
 export type Homework = {
@@ -41,7 +28,8 @@ export type Homework = {
   homework_type: string | null
   start_time: string | null
   end_time: string | null
-  created_by: number | null
+  created_by: string | null // Changed from number to string for UUID
+  scholium_id: number
   created_at: string
   completed?: boolean
 }
@@ -65,6 +53,6 @@ export type Attachment = {
   file_name: string
   file_url: string
   file_size: number | null
-  uploaded_by: number | null
+  uploaded_by: string | null // Changed from number to string for UUID
   created_at: string
 }

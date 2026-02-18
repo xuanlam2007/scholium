@@ -1,65 +1,25 @@
-import { cookies } from "next/headers"
-import { sql, type User } from "./db"
-import bcrypt from "bcryptjs"
-
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10)
-}
-
-// Encrypts and compares password with hash
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash)
-}
-
-export function generateToken(): string {
-  const array = new Uint8Array(32)
-  crypto.getRandomValues(array)
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("")
-}
-
-export async function createSession(userId: number): Promise<string> {
-  const token = generateToken()
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-
-  await sql`
-    INSERT INTO sessions (user_id, token, expires_at)
-    VALUES (${userId}, ${token}, ${expiresAt.toISOString()})
-  `
-
-  const cookieStore = await cookies()
-  cookieStore.set("session_token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    expires: expiresAt,
-    path: "/",
-  })
-  return token
-}
+import { createClient } from "@/lib/supabase/server"
+import type { User } from "./db"
 
 export async function getSession(): Promise<User | null> {
-  const cookieStore = await cookies()
-  const token = cookieStore.get("session_token")?.value
+  try {
+    const supabase = await createClient()
+    const { data: { user: authUser }, error } = await supabase.auth.getUser()
 
-  if (!token) return null
+    if (error || !authUser) return null
 
-  const result = await sql`
-    SELECT u.id, u.email, u.name, u.role, u.created_at
-    FROM sessions s
-    JOIN users u ON s.user_id = u.id
-    WHERE s.token = ${token} AND s.expires_at > NOW()
-  `
-
-  return (result[0] as User) || null
-}
-
-export async function deleteSession(): Promise<void> {
-  const cookieStore = await cookies()
-  const token = cookieStore.get("session_token")?.value
-
-  if (token) {
-    await sql`DELETE FROM sessions WHERE token = ${token}`
-    cookieStore.delete("session_token")
+    // Use auth user metadata directly to avoid RLS issues
+    // The database trigger stores name/role in user_metadata during signup
+    return {
+      id: authUser.id,
+      email: authUser.email || '',
+      name: authUser.user_metadata?.name || 'User',
+      role: authUser.user_metadata?.role || 'student',
+      created_at: authUser.created_at || new Date().toISOString(),
+    }
+  } catch (error) {
+    console.error('[v0] Error getting session:', error)
+    return null
   }
 }
 
@@ -78,3 +38,5 @@ export async function requireAdmin(): Promise<User> {
   }
   return user
 }
+
+

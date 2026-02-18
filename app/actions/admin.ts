@@ -1,66 +1,117 @@
 "use server"
 
-import { sql, type User } from "@/lib/db"
-import { requireAdmin, hashPassword } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/server"
+import type { User } from "@/lib/db"
+import { requireAdmin } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 
 export async function getAllUsers(): Promise<User[]> {
   await requireAdmin()
 
-  const result = await sql`
-    SELECT id, email, name, role, created_at 
-    FROM users 
-    ORDER BY created_at DESC
-  `
-  return result as User[]
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, email, name, role, created_at')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[v0] Error fetching all users:', error)
+    return []
+  }
+
+  return data as User[]
 }
 
 export async function getAllScholiums() {
   await requireAdmin()
 
-  const result = await sql`
-    SELECT 
-      t.id,
-      t.name,
-      t.created_at,
-      u.name as creator_name,
-      u.email as creator_email,
-      COUNT(DISTINCT tm.user_id) as member_count
-    FROM scholiums t
-    LEFT JOIN users u ON t.user_id = u.id
-    LEFT JOIN scholium_members tm ON t.id = tm.scholium_id
-    GROUP BY t.id, t.name, t.created_at, u.name, u.email
-    ORDER BY t.created_at DESC
-  `
-  return result
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('scholiums')
+    .select(`
+      id,
+      name,
+      created_at,
+      users!scholiums_user_id_fkey (
+        name,
+        email
+      ),
+      scholium_members (
+        user_id
+      )
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[v0] Error fetching all scholiums:', error)
+    return []
+  }
+
+  // Transform the data to match expected format
+  return data.map((scholium: any) => ({
+    id: scholium.id,
+    name: scholium.name,
+    created_at: scholium.created_at,
+    creator_name: scholium.users?.name || 'Unknown',
+    creator_email: scholium.users?.email || '',
+    member_count: scholium.scholium_members?.length || 0,
+  }))
 }
 
 export async function deleteScholium(scholiumId: number) {
   await requireAdmin()
 
-  await sql`DELETE FROM scholiums WHERE id = ${scholiumId}`
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('scholiums')
+    .delete()
+    .eq('id', scholiumId)
+
+  if (error) {
+    console.error('[v0] Error deleting scholium:', error)
+    return { success: false, error: 'Failed to delete scholium' }
+  }
 
   revalidatePath("/admin")
   return { success: true }
 }
 
-export async function updateUserRole(userId: number, role: "admin" | "student") {
+export async function updateUserRole(userId: string, role: "admin" | "student") {
   await requireAdmin()
 
-  await sql`UPDATE users SET role = ${role} WHERE id = ${userId}`
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('users')
+    .update({ role })
+    .eq('id', userId)
+
+  if (error) {
+    console.error('[v0] Error updating user role:', error)
+    return { success: false, error: 'Failed to update user role' }
+  }
 
   revalidatePath("/admin")
   return { success: true }
 }
 
-export async function deleteUser(userId: number) {
+export async function deleteUser(userId: string) {
   await requireAdmin()
 
-  // Don't allow deleting yourself
-  await sql`DELETE FROM sessions WHERE user_id = ${userId}`
-  await sql`DELETE FROM homework_completion WHERE user_id = ${userId}`
-  await sql`DELETE FROM users WHERE id = ${userId}`
+  const supabase = await createClient()
 
+  // Delete from Supabase Auth
+  const { error: authError } = await supabase.auth.admin.deleteUser(userId)
+
+  if (authError) {
+    console.error('[v0] Error deleting user from auth:', authError)
+    // Continue even if auth deletion fails - might not have admin access
+  }
+
+  // The database trigger will handle cascading deletes in public.users
   revalidatePath("/admin")
   return { success: true }
 }
@@ -77,17 +128,27 @@ export async function createUser(formData: FormData) {
     return { error: "All fields are required" }
   }
 
-  const existing = await sql`SELECT id FROM users WHERE email = ${email}`
-  if (existing.length > 0) {
-    return { error: "Email already registered" }
+  const supabase = await createClient()
+
+  // Create auth user
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name,
+        role: role || 'student',
+      },
+    },
+  })
+
+  if (authError) {
+    console.error('[v0] Error creating user:', authError)
+    if (authError.message.includes('already registered')) {
+      return { error: "Email already registered" }
+    }
+    return { error: authError.message }
   }
-
-  const passwordHash = await hashPassword(password)
-
-  await sql`
-    INSERT INTO users (email, password_hash, name, role)
-    VALUES (${email}, ${passwordHash}, ${name}, ${role || "student"})
-  `
 
   revalidatePath("/admin")
   return { success: true }
@@ -96,30 +157,62 @@ export async function createUser(formData: FormData) {
 export async function getScholiumMembers(scholiumId: number) {
   await requireAdmin()
 
-  const result = await sql`
-    SELECT 
-      sm.id,
-      sm.user_id,
-      sm.scholium_id,
-      sm.is_host,
-      sm.can_add_homework,
-      sm.can_create_subject,
-      sm.joined_at,
-      u.name as user_name,
-      u.email as user_email,
-      u.role as user_role
-    FROM scholium_members sm
-    LEFT JOIN users u ON sm.user_id = u.id
-    WHERE sm.scholium_id = ${scholiumId}
-    ORDER BY sm.is_host DESC, sm.joined_at ASC
-  `
-  return result
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('scholium_members')
+    .select(`
+      id,
+      user_id,
+      scholium_id,
+      is_host,
+      can_add_homework,
+      can_create_subject,
+      joined_at,
+      users (
+        name,
+        email,
+        role
+      )
+    `)
+    .eq('scholium_id', scholiumId)
+    .order('is_host', { ascending: false })
+    .order('joined_at', { ascending: true })
+
+  if (error) {
+    console.error('[v0] Error fetching scholium members:', error)
+    return []
+  }
+
+  // Transform data to match expected format
+  return data.map((member: any) => ({
+    id: member.id,
+    user_id: member.user_id,
+    scholium_id: member.scholium_id,
+    is_host: member.is_host,
+    can_add_homework: member.can_add_homework,
+    can_create_subject: member.can_create_subject,
+    joined_at: member.joined_at,
+    user_name: member.users?.name || 'Unknown',
+    user_email: member.users?.email || '',
+    user_role: member.users?.role || 'student',
+  }))
 }
 
 export async function removeScholiumMember(memberId: number) {
   await requireAdmin()
 
-  await sql`DELETE FROM scholium_members WHERE id = ${memberId}`
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('scholium_members')
+    .delete()
+    .eq('id', memberId)
+
+  if (error) {
+    console.error('[v0] Error removing scholium member:', error)
+    return { success: false, error: 'Failed to remove member' }
+  }
 
   revalidatePath("/admin")
   return { success: true }
@@ -134,13 +227,20 @@ export async function updateScholiumMemberPermissions(
 ) {
   await requireAdmin()
 
-  await sql`
-    UPDATE scholium_members 
-    SET 
-      can_add_homework = ${permissions.can_add_homework},
-      can_create_subject = ${permissions.can_create_subject}
-    WHERE id = ${memberId}
-  `
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('scholium_members')
+    .update({
+      can_add_homework: permissions.can_add_homework,
+      can_create_subject: permissions.can_create_subject,
+    })
+    .eq('id', memberId)
+
+  if (error) {
+    console.error('[v0] Error updating permissions:', error)
+    return { success: false, error: 'Failed to update permissions' }
+  }
 
   revalidatePath("/admin")
   return { success: true }
@@ -148,69 +248,114 @@ export async function updateScholiumMemberPermissions(
 
 export async function getAllUsersForScholium(scholiumId: number) {
   await requireAdmin()
-  // Get all users who are NOT already members of this scholium
 
-  const result = await sql`
-    SELECT u.id, u.name, u.email, u.role
-    FROM users u
-    WHERE u.id NOT IN (
-      SELECT user_id FROM scholium_members WHERE scholium_id = ${scholiumId}
-    )
-    AND u.role != 'admin'
-    ORDER BY u.name ASC
-  `
+  const supabase = await createClient()
 
-  return result
+  // Get all user IDs who are already members
+  const { data: members } = await supabase
+    .from('scholium_members')
+    .select('user_id')
+    .eq('scholium_id', scholiumId)
+
+  const memberIds = members?.map(m => m.user_id) || []
+
+  // Get all users who are not members
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, name, email, role')
+    .neq('role', 'admin')
+    .order('name')
+
+  if (error) {
+    console.error('[v0] Error fetching users for scholium:', error)
+    return []
+  }
+
+  // Filter out existing members
+  return data.filter((user: any) => !memberIds.includes(user.id))
 }
 
-export async function addMemberToScholium(scholiumId: number, userId: number) {
+export async function addMemberToScholium(scholiumId: number, userId: string) {
   await requireAdmin()
 
-  await sql`
-    INSERT INTO scholium_members (scholium_id, user_id, is_host, can_add_homework, can_create_subject)
-    VALUES (${scholiumId}, ${userId}, false, true, false)
-  `
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('scholium_members')
+    .insert({
+      scholium_id: scholiumId,
+      user_id: userId,
+      is_host: false,
+      can_add_homework: true,
+      can_create_subject: false,
+    })
+
+  if (error) {
+    console.error('[v0] Error adding member to scholium:', error)
+    return { success: false, error: 'Failed to add member' }
+  }
+
   revalidatePath("/admin")
   return { success: true }
 }
 
 export async function transferScholiumHost(scholiumId: number, newHostMemberId: number) {
   await requireAdmin()
+
+  const supabase = await createClient()
+
   // Remove host from current host
-  await sql`
-    UPDATE scholium_members 
-    SET is_host = false
-    WHERE scholium_id = ${scholiumId} AND is_host = true
-  `
+  const { error: removeError } = await supabase
+    .from('scholium_members')
+    .update({ is_host: false })
+    .eq('scholium_id', scholiumId)
+    .eq('is_host', true)
+
+  if (removeError) {
+    console.error('[v0] Error removing old host:', removeError)
+    return { success: false, error: 'Failed to transfer host' }
+  }
+
   // Set new host
-  await sql`
-    UPDATE scholium_members 
-    SET is_host = true, can_add_homework = true, can_create_subject = true
-    WHERE id = ${newHostMemberId}
-  `
+  const { error: setError } = await supabase
+    .from('scholium_members')
+    .update({
+      is_host: true,
+      can_add_homework: true,
+      can_create_subject: true,
+    })
+    .eq('id', newHostMemberId)
+
+  if (setError) {
+    console.error('[v0] Error setting new host:', setError)
+    return { success: false, error: 'Failed to transfer host' }
+  }
 
   revalidatePath("/admin")
-  
   return { success: true }
-
 }
-
-// Subjects are now managed per-scholium, not globally by admins
 
 export async function getAdminStats() {
   await requireAdmin()
 
-  const [users, scholiums, homework, completions] = await Promise.all([
-    sql`SELECT COUNT(*) as count FROM users`,
-    sql`SELECT COUNT(*) as count FROM scholiums`,
-    sql`SELECT COUNT(*) as count FROM homework`,
-    sql`SELECT COUNT(*) as count FROM homework_completion`,
+  const supabase = await createClient()
+
+  const [
+    { count: usersCount },
+    { count: scholiumsCount },
+    { count: homeworkCount },
+    { count: completionsCount },
+  ] = await Promise.all([
+    supabase.from('users').select('*', { count: 'exact', head: true }),
+    supabase.from('scholiums').select('*', { count: 'exact', head: true }),
+    supabase.from('homework').select('*', { count: 'exact', head: true }),
+    supabase.from('homework_completion').select('*', { count: 'exact', head: true }),
   ])
 
   return {
-    totalUsers: Number(users[0].count),
-    totalScholiums: Number(scholiums[0].count),
-    totalHomework: Number(homework[0].count),
-    totalCompletions: Number(completions[0].count),
+    totalUsers: usersCount || 0,
+    totalScholiums: scholiumsCount || 0,
+    totalHomework: homeworkCount || 0,
+    totalCompletions: completionsCount || 0,
   }
 }

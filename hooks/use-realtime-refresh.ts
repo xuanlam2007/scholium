@@ -1,46 +1,32 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { subscribeToScholiumChanges } from '@/lib/realtime'
 
 /** 
- * Hook that listens to SSE events and refreshes only when changes occur
- * This provides instant updates across all users without constant polling
- * Thanks to ChatGPT suggestion for a more efficient approach than polling every few seconds haha
+ * Hook that listens to Supabase Realtime database changes and refreshes the UI
+ * This provides instant updates across all users in the same scholium
+ * Uses Supabase's native realtime subscriptions - no polling or SSE required
  */
 export function useRealtimeRefresh(scholiumId: number) {
   const router = useRouter()
-  const eventSourceRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
-    // Connect to SSE endpoint
-    const eventSource = new EventSource(`/api/realtime/events?scholiumId=${scholiumId}`)
-    eventSourceRef.current = eventSource
+    if (!scholiumId) return
 
-    eventSource.onopen = () => {
-      console.log('SSE connection established')
-    }
+    console.log('[v0] Setting up realtime subscriptions for scholium', scholiumId)
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (data.type === 'connected') {
-          return
-        }
-        console.log('Received change event:', data.type)
-        router.refresh()
-      } catch (error) {
-        console.error('Error parsing SSE message:', error)
-      }
-    }
-    eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error)
-    }
-    // Cleanup
+    // Subscribe to all changes in this scholium
+    const unsubscribe = subscribeToScholiumChanges(scholiumId, (changeType) => {
+      console.log('[v0] Change detected, refreshing UI:', changeType)
+      router.refresh()
+    })
+
+    // Cleanup subscriptions when component unmounts or scholiumId changes
     return () => {
-      console.log('Closing SSE connection')
-      eventSource.close()
-      eventSourceRef.current = null
+      console.log('[v0] Cleaning up realtime subscriptions for scholium', scholiumId)
+      unsubscribe()
     }
   }, [scholiumId, router])
 }

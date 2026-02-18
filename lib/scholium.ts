@@ -38,17 +38,18 @@ export function decryptAccessId(encryptedId: string): string {
 
 export type Scholium = {
   id: number
-  user_id: number
+  user_id: string
   name: string
   encrypted_access_id: string
+  time_slots?: Array<{ start: string; end: string }>
   created_at: string
   updated_at: string
 }
 
 export type ScholiumMember = {
   id: number
-  taskcademic_id: number
-  user_id: number
+  scholium_id: number
+  user_id: string
   is_host: boolean
   can_add_homework: boolean
   can_create_subject: boolean

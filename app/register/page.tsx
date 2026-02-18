@@ -11,14 +11,19 @@ import { BookOpen, Loader2 } from "lucide-react"
 
 export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
+    setSuccess(null)
     const result = await signUp(formData)
     if (result?.error) {
       setError(result.error)
+      setLoading(false)
+    } else if (result?.success && result?.message) {
+      setSuccess(result.message)
       setLoading(false)
     }
   }
@@ -39,6 +44,7 @@ export default function RegisterPage() {
         <form action={handleSubmit}>
           <CardContent className="space-y-4">
             {error && <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">{error}</div>}
+            {success && <div className="bg-green-500/10 text-green-600 text-sm p-3 rounded-md">{success}</div>}
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input id="name" name="name" type="text" placeholder="John Doe" required />

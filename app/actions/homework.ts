@@ -1,18 +1,29 @@
 "use server"
 
-import { sql, type Homework, type Subject, type Attachment } from "@/lib/db"
+import { createClient } from "@/lib/supabase/server"
+import type { Homework, Subject, Attachment } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { getCurrentScholiumId } from "@/app/actions/scholium"
-import { broadcastChange } from "@/lib/realtime"
 import { revalidatePath } from "next/cache"
-import { cookies } from "next/headers"
 
 export async function getSubjects(): Promise<Subject[]> {
   const scholiumId = await getCurrentScholiumId()
   if (!scholiumId) return []
 
-  const result = await sql`SELECT * FROM subjects WHERE scholium_id = ${scholiumId} ORDER BY name`
-  return result as Subject[]
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('subjects')
+    .select('*')
+    .eq('scholium_id', scholiumId)
+    .order('name')
+
+  if (error) {
+    console.error('[v0] Error fetching subjects:', error)
+    return []
+  }
+
+  return data as Subject[]
 }
 
 export async function getHomework(): Promise<Homework[]> {
@@ -22,19 +33,36 @@ export async function getHomework(): Promise<Homework[]> {
   const scholiumId = await getCurrentScholiumId()
   if (!scholiumId) return []
 
-  const result = await sql`
-    SELECT 
-      h.*,
-      s.name as subject_name,
-      s.color as subject_color,
-      CASE WHEN hc.user_id IS NOT NULL THEN true ELSE false END as completed
-    FROM homework h
-    LEFT JOIN subjects s ON h.subject_id = s.id
-    LEFT JOIN homework_completion hc ON h.id = hc.homework_id AND hc.user_id = ${user.id}
-    WHERE h.scholium_id = ${scholiumId}
-    ORDER BY h.due_date ASC, h.start_time ASC
-  `
-  return result as Homework[]
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('homework')
+    .select(`
+      *,
+      subjects (
+        name,
+        color
+      ),
+      homework_completion (
+        user_id
+      )
+    `)
+    .eq('scholium_id', scholiumId)
+    .order('due_date', { ascending: true })
+    .order('start_time', { ascending: true })
+
+  if (error) {
+    console.error('[v0] Error fetching homework:', error)
+    return []
+  }
+
+  // Transform data to match expected format
+  return data.map((hw: any) => ({
+    ...hw,
+    subject_name: hw.subjects?.name,
+    subject_color: hw.subjects?.color,
+    completed: hw.homework_completion?.some((hc: any) => hc.user_id === user.id) || false,
+  })) as Homework[]
 }
 
 export async function getHomeworkById(id: number): Promise<Homework | null> {
@@ -44,18 +72,36 @@ export async function getHomeworkById(id: number): Promise<Homework | null> {
   const scholiumId = await getCurrentScholiumId()
   if (!scholiumId) return null
 
-  const result = await sql`
-    SELECT 
-      h.*,
-      s.name as subject_name,
-      s.color as subject_color,
-      CASE WHEN hc.user_id IS NOT NULL THEN true ELSE false END as completed
-    FROM homework h
-    LEFT JOIN subjects s ON h.subject_id = s.id
-    LEFT JOIN homework_completion hc ON h.id = hc.homework_id AND hc.user_id = ${user.id}
-    WHERE h.id = ${id} AND h.scholium_id = ${scholiumId}
-  `
-  return (result[0] as Homework) || null
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('homework')
+    .select(`
+      *,
+      subjects (
+        name,
+        color
+      ),
+      homework_completion (
+        user_id
+      )
+    `)
+    .eq('id', id)
+    .eq('scholium_id', scholiumId)
+    .single()
+
+  if (error) {
+    console.error('[v0] Error fetching homework by id:', error)
+    return null
+  }
+
+  // Transform data
+  return {
+    ...data,
+    subject_name: data.subjects?.name,
+    subject_color: data.subjects?.color,
+    completed: data.homework_completion?.some((hc: any) => hc.user_id === user.id) || false,
+  } as Homework
 }
 
 export async function createHomework(formData: FormData) {
@@ -69,13 +115,17 @@ export async function createHomework(formData: FormData) {
     return { error: "No scholium selected" }
   }
 
-  // Check if user is a member of this scholium
-  const memberCheck = await sql`
-    SELECT id FROM scholium_members
-    WHERE scholium_id = ${scholiumId} AND user_id = ${user.id}
-  `
+  const supabase = await createClient()
 
-  if (memberCheck.length === 0) {
+  // Check if user is a member of this scholium
+  const { data: memberCheck } = await supabase
+    .from('scholium_members')
+    .select('id')
+    .eq('scholium_id', scholiumId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!memberCheck) {
     return { error: "You are not a member of this scholium" }
   }
 
@@ -91,23 +141,26 @@ export async function createHomework(formData: FormData) {
     return { error: "Title and due date are required" }
   }
 
-  await sql`
-    INSERT INTO homework (title, description, subject_id, due_date, homework_type, start_time, end_time, created_by, scholium_id)
-    VALUES (
-      ${title}, 
-      ${description || null}, 
-      ${subjectId ? Number.parseInt(subjectId) : null}, 
-      ${dueDate},
-      ${homeworkType ? homeworkType.toLowerCase() : null},
-      ${startTime || null},
-      ${endTime || null},
-      ${user.id},
-      ${scholiumId}
-    )
-  `
+  const { error } = await supabase
+    .from('homework')
+    .insert({
+      title,
+      description: description || null,
+      subject_id: subjectId ? parseInt(subjectId) : null,
+      due_date: dueDate,
+      homework_type: homeworkType ? homeworkType.toLowerCase() : null,
+      start_time: startTime || null,
+      end_time: endTime || null,
+      created_by: user.id,
+      scholium_id: scholiumId,
+    })
+
+  if (error) {
+    console.error('[v0] Error creating homework:', error)
+    return { error: "Failed to create homework" }
+  }
 
   revalidatePath("/dashboard")
-  await broadcastChange(scholiumId, 'homework')
   return { success: true }
 }
 
@@ -122,12 +175,17 @@ export async function updateHomework(id: number, formData: FormData) {
     return { error: "No scholium selected" }
   }
 
-  // Verify homework belongs to this scholium
-  const homework = await sql`
-    SELECT id FROM homework WHERE id = ${id} AND scholium_id = ${scholiumId}
-  `
+  const supabase = await createClient()
 
-  if (homework.length === 0) {
+  // Verify homework belongs to this scholium
+  const { data: homework } = await supabase
+    .from('homework')
+    .select('id')
+    .eq('id', id)
+    .eq('scholium_id', scholiumId)
+    .single()
+
+  if (!homework) {
     return { error: "Homework not found" }
   }
 
@@ -143,20 +201,25 @@ export async function updateHomework(id: number, formData: FormData) {
     return { error: "Title and due date are required" }
   }
 
-  await sql`
-    UPDATE homework
-    SET title = ${title}, 
-        description = ${description || null}, 
-        subject_id = ${subjectId ? Number.parseInt(subjectId) : null}, 
-        due_date = ${dueDate},
-        homework_type = ${homeworkType || null},
-        start_time = ${startTime || null},
-        end_time = ${endTime || null}
-    WHERE id = ${id}
-  `
+  const { error } = await supabase
+    .from('homework')
+    .update({
+      title,
+      description: description || null,
+      subject_id: subjectId ? parseInt(subjectId) : null,
+      due_date: dueDate,
+      homework_type: homeworkType || null,
+      start_time: startTime || null,
+      end_time: endTime || null,
+    })
+    .eq('id', id)
+
+  if (error) {
+    console.error('[v0] Error updating homework:', error)
+    return { error: "Failed to update homework" }
+  }
 
   revalidatePath("/dashboard")
-  await broadcastChange(scholiumId, 'homework')
   return { success: true }
 }
 
@@ -171,19 +234,31 @@ export async function deleteHomework(id: number) {
     return { error: "No scholium selected" }
   }
 
-  // Verify homework belongs to this scholium
-  const homework = await sql`
-    SELECT id FROM homework WHERE id = ${id} AND scholium_id = ${scholiumId}
-  `
+  const supabase = await createClient()
 
-  if (homework.length === 0) {
+  // Verify homework belongs to this scholium
+  const { data: homework } = await supabase
+    .from('homework')
+    .select('id')
+    .eq('id', id)
+    .eq('scholium_id', scholiumId)
+    .single()
+
+  if (!homework) {
     return { error: "Homework not found" }
   }
 
-  await sql`DELETE FROM homework WHERE id = ${id}`
+  const { error } = await supabase
+    .from('homework')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('[v0] Error deleting homework:', error)
+    return { error: "Failed to delete homework" }
+  }
 
   revalidatePath("/dashboard")
-  await broadcastChange(scholiumId, 'homework')
   return { success: true }
 }
 
@@ -194,33 +269,64 @@ export async function toggleHomeworkCompletion(homeworkId: number) {
   const scholiumId = await getCurrentScholiumId()
   if (!scholiumId) return { error: "No scholium selected" }
 
-  const existing = await sql`
-    SELECT * FROM homework_completion 
-    WHERE homework_id = ${homeworkId} AND user_id = ${user.id}
-  `
+  const supabase = await createClient()
 
-  if (existing.length > 0) {
-    await sql`
-      DELETE FROM homework_completion 
-      WHERE homework_id = ${homeworkId} AND user_id = ${user.id}
-    `
+  // Check if already completed
+  const { data: existing } = await supabase
+    .from('homework_completion')
+    .select('*')
+    .eq('homework_id', homeworkId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (existing) {
+    // Delete completion
+    const { error } = await supabase
+      .from('homework_completion')
+      .delete()
+      .eq('homework_id', homeworkId)
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('[v0] Error deleting completion:', error)
+      return { error: "Failed to update completion" }
+    }
   } else {
-    await sql`
-      INSERT INTO homework_completion (homework_id, user_id)
-      VALUES (${homeworkId}, ${user.id})
-    `
+    // Insert completion
+    const { error } = await supabase
+      .from('homework_completion')
+      .insert({
+        homework_id: homeworkId,
+        user_id: user.id,
+        completed: true,
+        completed_at: new Date().toISOString(),
+      })
+
+    if (error) {
+      console.error('[v0] Error creating completion:', error)
+      return { error: "Failed to update completion" }
+    }
   }
 
   revalidatePath("/dashboard")
-  await broadcastChange(scholiumId, 'homework')
   return { success: true }
 }
 
 export async function getAttachments(homeworkId: number): Promise<Attachment[]> {
-  const result = await sql`
-    SELECT * FROM attachments WHERE homework_id = ${homeworkId} ORDER BY created_at DESC
-  `
-  return result as Attachment[]
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('attachments')
+    .select('*')
+    .eq('homework_id', homeworkId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[v0] Error fetching attachments:', error)
+    return []
+  }
+
+  return data as Attachment[]
 }
 
 export async function addAttachment(homeworkId: number, fileName: string, fileUrl: string, fileSize: number) {
@@ -234,19 +340,34 @@ export async function addAttachment(homeworkId: number, fileName: string, fileUr
     return { error: "No scholium selected" }
   }
 
-  // Verify homework belongs to this scholium
-  const homework = await sql`
-    SELECT id FROM homework WHERE id = ${homeworkId} AND scholium_id = ${scholiumId}
-  `
+  const supabase = await createClient()
 
-  if (homework.length === 0) {
+  // Verify homework belongs to this scholium
+  const { data: homework } = await supabase
+    .from('homework')
+    .select('id')
+    .eq('id', homeworkId)
+    .eq('scholium_id', scholiumId)
+    .single()
+
+  if (!homework) {
     return { error: "Homework not found" }
   }
 
-  await sql`
-    INSERT INTO attachments (homework_id, file_name, file_url, file_size, uploaded_by)
-    VALUES (${homeworkId}, ${fileName}, ${fileUrl}, ${fileSize}, ${user.id})
-  `
+  const { error } = await supabase
+    .from('attachments')
+    .insert({
+      homework_id: homeworkId,
+      file_name: fileName,
+      file_url: fileUrl,
+      file_size: fileSize,
+      uploaded_by: user.id,
+    })
+
+  if (error) {
+    console.error('[v0] Error adding attachment:', error)
+    return { error: "Failed to add attachment" }
+  }
 
   revalidatePath("/dashboard")
   return { success: true }
@@ -263,18 +384,33 @@ export async function deleteAttachment(id: number) {
     return { error: "No scholium selected" }
   }
 
-  // Verify attachment's homework belongs to this scholium
-  const attachment = await sql`
-    SELECT a.id FROM attachments a
-    INNER JOIN homework h ON a.homework_id = h.id
-    WHERE a.id = ${id} AND h.scholium_id = ${scholiumId}
-  `
+  const supabase = await createClient()
 
-  if (attachment.length === 0) {
+  // Verify attachment's homework belongs to this scholium
+  const { data: attachment } = await supabase
+    .from('attachments')
+    .select(`
+      id,
+      homework:homework_id (
+        scholium_id
+      )
+    `)
+    .eq('id', id)
+    .single()
+
+  if (!attachment || (attachment as any).homework?.scholium_id !== scholiumId) {
     return { error: "Attachment not found" }
   }
 
-  await sql`DELETE FROM attachments WHERE id = ${id}`
+  const { error } = await supabase
+    .from('attachments')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.error('[v0] Error deleting attachment:', error)
+    return { error: "Failed to delete attachment" }
+  }
 
   revalidatePath("/dashboard")
   return { success: true }
@@ -291,19 +427,22 @@ export async function createSubject(name: string, color: string) {
     return { error: "No scholium selected", success: false }
   }
 
-  // Check if user has permission to create subjects
-  const memberCheck = await sql`
-    SELECT can_create_subject, is_host FROM scholium_members
-    WHERE scholium_id = ${scholiumId} AND user_id = ${user.id}
-  `
+  const supabase = await createClient()
 
-  if (memberCheck.length === 0) {
+  // Check if user has permission to create subjects
+  const { data: memberCheck } = await supabase
+    .from('scholium_members')
+    .select('can_create_subject, is_host')
+    .eq('scholium_id', scholiumId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!memberCheck) {
     return { error: "You are not a member of this scholium", success: false }
   }
 
-  const member = memberCheck[0] as any
-  const canCreateSubject = member.is_host || member.can_create_subject
-  
+  const canCreateSubject = memberCheck.is_host || memberCheck.can_create_subject
+
   if (!canCreateSubject) {
     return { error: "You do not have permission to create subjects", success: false }
   }
@@ -312,19 +451,21 @@ export async function createSubject(name: string, color: string) {
     return { error: "Subject name is required", success: false }
   }
 
-  try {
-    await sql`
-      INSERT INTO subjects (name, color, scholium_id)
-      VALUES (${name}, ${color}, ${scholiumId})
-    `
+  const { error } = await supabase
+    .from('subjects')
+    .insert({
+      name,
+      color,
+      scholium_id: scholiumId,
+    })
 
-    revalidatePath("/dashboard")
-    await broadcastChange(scholiumId, 'subject')
-    return { success: true }
-  } catch (error) {
-    console.error('Error creating subject:', error)
+  if (error) {
+    console.error('[v0] Error creating subject:', error)
     return { error: "Failed to create subject", success: false }
   }
+
+  revalidatePath("/dashboard")
+  return { success: true }
 }
 
 export async function updateSubject(id: number, name: string, color: string) {
@@ -338,12 +479,17 @@ export async function updateSubject(id: number, name: string, color: string) {
     return { error: "No scholium selected", success: false }
   }
 
-  // Verify subject belongs to this scholium
-  const subject = await sql`
-    SELECT id FROM subjects WHERE id = ${id} AND scholium_id = ${scholiumId}
-  `
+  const supabase = await createClient()
 
-  if (subject.length === 0) {
+  // Verify subject belongs to this scholium
+  const { data: subject } = await supabase
+    .from('subjects')
+    .select('id')
+    .eq('id', id)
+    .eq('scholium_id', scholiumId)
+    .single()
+
+  if (!subject) {
     return { error: "Subject not found", success: false }
   }
 
@@ -351,20 +497,21 @@ export async function updateSubject(id: number, name: string, color: string) {
     return { error: "Subject name is required", success: false }
   }
 
-  try {
-    await sql`
-      UPDATE subjects
-      SET name = ${name}, color = ${color}
-      WHERE id = ${id}
-    `
+  const { error } = await supabase
+    .from('subjects')
+    .update({
+      name,
+      color,
+    })
+    .eq('id', id)
 
-    revalidatePath("/dashboard")
-    await broadcastChange(scholiumId, 'subject')
-    return { success: true }
-  } catch (error) {
-    console.error('Error updating subject:', error)
+  if (error) {
+    console.error('[v0] Error updating subject:', error)
     return { error: "Failed to update subject", success: false }
   }
+
+  revalidatePath("/dashboard")
+  return { success: true }
 }
 
 export async function deleteSubject(id: number) {
@@ -378,35 +525,45 @@ export async function deleteSubject(id: number) {
     return { error: "No scholium selected", success: false }
   }
 
-  // Check if user has permission to delete subjects (must be host)
-  const hostCheck = await sql`
-    SELECT id FROM scholium_members
-    WHERE scholium_id = ${scholiumId} AND user_id = ${user.id} AND is_host = true
-  `
+  const supabase = await createClient()
 
-  if (hostCheck.length === 0) {
+  // Check if user has permission to delete subjects (must be host)
+  const { data: hostCheck } = await supabase
+    .from('scholium_members')
+    .select('id')
+    .eq('scholium_id', scholiumId)
+    .eq('user_id', user.id)
+    .eq('is_host', true)
+    .single()
+
+  if (!hostCheck) {
     return { error: "Only hosts can delete subjects", success: false }
   }
 
   // Verify subject belongs to this scholium
-  const subject = await sql`
-    SELECT id FROM subjects WHERE id = ${id} AND scholium_id = ${scholiumId}
-  `
+  const { data: subject } = await supabase
+    .from('subjects')
+    .select('id')
+    .eq('id', id)
+    .eq('scholium_id', scholiumId)
+    .single()
 
-  if (subject.length === 0) {
+  if (!subject) {
     return { error: "Subject not found", success: false }
   }
 
-  try {
-    await sql`DELETE FROM subjects WHERE id = ${id}`
+  const { error } = await supabase
+    .from('subjects')
+    .delete()
+    .eq('id', id)
 
-    revalidatePath("/dashboard")
-    await broadcastChange(scholiumId, 'subject')
-    return { success: true }
-  } catch (error) {
-    console.error('Error deleting subject:', error)
+  if (error) {
+    console.error('[v0] Error deleting subject:', error)
     return { error: "Failed to delete subject", success: false }
   }
+
+  revalidatePath("/dashboard")
+  return { success: true }
 }
 
 export async function getUpcomingDeadlines(): Promise<Homework[]> {
@@ -416,21 +573,42 @@ export async function getUpcomingDeadlines(): Promise<Homework[]> {
   const scholiumId = await getCurrentScholiumId()
   if (!scholiumId) return []
 
-  const result = await sql`
-    SELECT 
-      h.*,
-      s.name as subject_name,
-      s.color as subject_color,
-      CASE WHEN hc.user_id IS NOT NULL THEN true ELSE false END as completed
-    FROM homework h
-    LEFT JOIN subjects s ON h.subject_id = s.id
-    LEFT JOIN homework_completion hc ON h.id = hc.homework_id AND hc.user_id = ${user.id}
-    WHERE h.scholium_id = ${scholiumId}
-      AND h.due_date >= CURRENT_DATE 
-      AND h.due_date <= CURRENT_DATE + INTERVAL '7 days'
-      AND hc.user_id IS NULL
-    ORDER BY h.due_date ASC, h.start_time ASC
-    LIMIT 5
-  `
-  return result as Homework[]
+  const supabase = await createClient()
+
+  const today = new Date().toISOString().split('T')[0]
+  const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+  const { data, error } = await supabase
+    .from('homework')
+    .select(`
+      *,
+      subjects (
+        name,
+        color
+      ),
+      homework_completion!left (
+        user_id
+      )
+    `)
+    .eq('scholium_id', scholiumId)
+    .gte('due_date', today)
+    .lte('due_date', sevenDaysLater)
+    .order('due_date', { ascending: true })
+    .order('start_time', { ascending: true })
+    .limit(5)
+
+  if (error) {
+    console.error('[v0] Error fetching upcoming deadlines:', error)
+    return []
+  }
+
+  // Filter out completed homework and transform data
+  return data
+    .filter((hw: any) => !hw.homework_completion?.some((hc: any) => hc.user_id === user.id))
+    .map((hw: any) => ({
+      ...hw,
+      subject_name: hw.subjects?.name,
+      subject_color: hw.subjects?.color,
+      completed: false,
+    })) as Homework[]
 }
