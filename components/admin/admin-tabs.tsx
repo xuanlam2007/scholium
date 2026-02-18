@@ -8,7 +8,7 @@ import { ScholiumsManagement } from "./scholiums-management"
 interface AdminTabsProps {
   users: User[]
   scholiums: any[]
-  currentUserId: number
+  currentUserId: string
 }
 
 export function AdminTabs({ users, scholiums, currentUserId }: AdminTabsProps) {

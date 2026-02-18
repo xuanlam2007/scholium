@@ -98,7 +98,7 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
   async function handleAddMember() {
     if (!viewMembersId || !selectedUserId) return
     setAdding(true)
-    const result = await addMemberToScholium(viewMembersId, parseInt(selectedUserId))
+    const result = await addMemberToScholium(viewMembersId, selectedUserId)
     if (result.success) {
       // Reload members
       const membersList = await getScholiumMembers(viewMembersId)

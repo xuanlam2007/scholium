@@ -23,7 +23,7 @@ import { Loader2, MoreVertical, Plus, Shield, Trash2, UserIcon } from "lucide-re
 
 interface UsersManagementProps {
   users: User[]
-  currentUserId: number
+  currentUserId: string
 }
 
 export function UsersManagement({ users, currentUserId }: UsersManagementProps) {
@@ -31,11 +31,11 @@ export function UsersManagement({ users, currentUserId }: UsersManagementProps) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleRoleChange(userId: number, role: "admin" | "student") {
+  async function handleRoleChange(userId: string, role: "admin" | "student") {
     await updateUserRole(userId, role)
   }
 
-  async function handleDelete(userId: number) {
+  async function handleDelete(userId: string) {
     if (confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
       await deleteUser(userId)
     }
