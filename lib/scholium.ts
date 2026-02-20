@@ -51,6 +51,7 @@ export type ScholiumMember = {
   scholium_id: number
   user_id: string
   is_host: boolean
+  is_cohost: boolean
   can_add_homework: boolean
   can_create_subject: boolean
   joined_at: string

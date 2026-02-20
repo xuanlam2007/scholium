@@ -33,7 +33,6 @@ export function subscribeToScholiumChanges(
         filter: `scholium_id=eq.${scholiumId}`,
       },
       () => {
-        console.log('[v0] Homework changed in scholium', scholiumId)
         onChange('homework')
       }
     )
@@ -52,7 +51,6 @@ export function subscribeToScholiumChanges(
         table: 'homework_completion',
       },
       () => {
-        console.log('[v0] Homework completion changed')
         onChange('completion')
       }
     )
@@ -71,7 +69,6 @@ export function subscribeToScholiumChanges(
         table: 'subjects',
       },
       () => {
-        console.log('[v0] Subject changed')
         onChange('subject')
       }
     )
@@ -91,7 +88,6 @@ export function subscribeToScholiumChanges(
         filter: `scholium_id=eq.${scholiumId}`,
       },
       (payload) => {
-        console.log('[v0] Member changed in scholium', scholiumId, payload)
         if (payload.eventType === 'UPDATE') {
           // Check if permissions were updated
           onChange('permissions')
@@ -116,7 +112,6 @@ export function subscribeToScholiumChanges(
         filter: `id=eq.${scholiumId}`,
       },
       () => {
-        console.log('[v0] Scholium settings changed', scholiumId)
         onChange('timeslots')
       }
     )
@@ -135,7 +130,6 @@ export function subscribeToScholiumChanges(
         table: 'attachments',
       },
       () => {
-        console.log('[v0] Attachment changed')
         onChange('homework')
       }
     )
@@ -145,7 +139,6 @@ export function subscribeToScholiumChanges(
 
   // Return cleanup function
   return () => {
-    console.log('[v0] Unsubscribing from scholium changes', scholiumId)
     channels.forEach((channel) => {
       supabase.removeChannel(channel)
     })
@@ -159,5 +152,4 @@ export function subscribeToScholiumChanges(
 export async function broadcastChange(scholiumId: number, type: RealtimeChangeType): Promise<void> {
   // With Supabase Realtime, database changes automatically trigger subscriptions
   // This function is now a no-op but kept for compatibility
-  console.log('[v0] Database change will be automatically broadcast:', scholiumId, type)
 }

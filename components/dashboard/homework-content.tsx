@@ -15,6 +15,7 @@ interface HomeworkContentProps {
   canCreateSubject: boolean
   isHost: boolean
   scholiumId: number
+  currentUserId: string
   members: (ScholiumMember & { user_name: string; user_email: string })[]
   onSubjectsChange?: () => void
 }
@@ -26,11 +27,12 @@ export function HomeworkContent({
   canCreateSubject,
   isHost,
   scholiumId,
+  currentUserId,
   members,
   onSubjectsChange,
 }: HomeworkContentProps) {
-  // Enable real-time updates via SSE
-  useRealtimeRefresh(scholiumId)
+  // Enable real-time updates and member check (redirects if kicked)
+  useRealtimeRefresh(scholiumId, currentUserId)
 
   const [viewMode, setViewMode] = useState<"list" | "timetable">("list")
   const [searchQuery, setSearchQuery] = useState("")

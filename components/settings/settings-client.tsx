@@ -10,8 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DashboardHeader } from '@/components/dashboard/header'
-import { updateUserProfile, changePassword, sendPasswordResetEmail } from '@/app/actions/user'
-import { Loader2, Moon, Sun, Monitor, Upload, Mail, Lock, User } from 'lucide-react'
+import { updateUserProfile, changePassword } from '@/app/actions/user'
+import { Loader2, Moon, Sun, Monitor, Upload, Lock, User } from 'lucide-react'
 import type { User as UserType } from '@/lib/db'
 
 interface SettingsClientProps {
@@ -36,11 +36,6 @@ export function SettingsClient({ user: initialUser, scholiumId }: SettingsClient
   const [passwordLoading, setPasswordLoading] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
-
-  // Email verification states
-  const [emailLoading, setEmailLoading] = useState(false)
-  const [emailError, setEmailError] = useState<string | null>(null)
-  const [emailSuccess, setEmailSuccess] = useState(false)
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -99,23 +94,6 @@ export function SettingsClient({ user: initialUser, scholiumId }: SettingsClient
     }
 
     setPasswordLoading(false)
-  }
-
-  const handleSendVerificationEmail = async () => {
-    setEmailLoading(true)
-    setEmailError(null)
-    setEmailSuccess(false)
-
-    const result = await sendPasswordResetEmail(user.email)
-
-    if (result.success) {
-      setEmailSuccess(true)
-      setTimeout(() => setEmailSuccess(false), 5000)
-    } else {
-      setEmailError(result.error || 'Failed to send email')
-    }
-
-    setEmailLoading(false)
   }
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
@@ -288,30 +266,7 @@ export function SettingsClient({ user: initialUser, scholiumId }: SettingsClient
                 </CardContent>
               </Card>
 
-              {/* Email Verification */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Email Verification</CardTitle>
-                  <CardDescription>
-                    {user.email_verified ? 'Your email is verified' : 'Verify your email address for additional security'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {emailError && (
-                    <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">{emailError}</div>
-                  )}
-                  {emailSuccess && (
-                    <div className="bg-green-500/10 text-green-700 dark:text-green-400 text-sm p-3 rounded-md">
-                      Verification email sent to {user.email}. Check your inbox for instructions.
-                    </div>
-                  )}
-                  <Button onClick={handleSendVerificationEmail} disabled={emailLoading || user.email_verified}>
-                    {emailLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <Mail className="mr-2 h-4 w-4" />
-                    {user.email_verified ? 'Email Verified' : 'Send Verification Email'}
-                  </Button>
-                </CardContent>
-              </Card>
+
             </TabsContent>
 
             {/* Appearance Tab */}

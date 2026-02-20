@@ -33,7 +33,6 @@ export async function signUp(formData: FormData) {
   })
 
   if (authError) {
-    console.error('[v0] Sign up error:', authError)
     if (authError.message.includes('already registered')) {
       return { error: "Email already registered" }
     }
@@ -53,7 +52,6 @@ export async function signUp(formData: FormData) {
   if (authData.session) {
     // User is logged in immediately (email confirmation disabled)
     // The database trigger automatically creates the user profile
-    console.log('[v0] User signed up successfully:', authData.user.email)
     redirect("/scholiums")
   } else {
     // Email confirmation required
@@ -80,7 +78,6 @@ export async function signIn(formData: FormData) {
   })
 
   if (error) {
-    console.error('[v0] Sign in error:', error)
     return { error: "Invalid email or password" }
   }
 

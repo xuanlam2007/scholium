@@ -18,7 +18,6 @@ export async function getSession(): Promise<User | null> {
       created_at: authUser.created_at || new Date().toISOString(),
     }
   } catch (error) {
-    console.error('[v0] Error getting session:', error)
     return null
   }
 }
