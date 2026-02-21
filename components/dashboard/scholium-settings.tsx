@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -43,8 +43,11 @@ import {
   renewScholiumAccessId,
   renameScholium,
   clearAllScholiumData,
+  updateDefaultPermissions,
+  getDefaultPermissions,
 } from '@/app/actions/scholium'
 import { useToast } from '@/hooks/use-toast'
+import { Switch } from '@/components/ui/switch'
 
 interface ScholiumSettingsProps {
   scholiumId: number
@@ -79,6 +82,25 @@ export function ScholiumSettings({
   const [loading, setLoading] = useState(false)
   const [renewing, setRenewing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [canAddHomework, setCanAddHomework] = useState(true)
+  const [canCreateSubject, setCanCreateSubject] = useState(true)
+  const [permissionsLoading, setPermissionsLoading] = useState(true)
+
+  useEffect(() => {
+    if (isHost) {
+      loadDefaultPermissions()
+    }
+  }, [scholiumId, isHost])
+
+  async function loadDefaultPermissions() {
+    setPermissionsLoading(true)
+    const result = await getDefaultPermissions(scholiumId)
+    if (result.success && result.data) {
+      setCanAddHomework(result.data.canAddHomework)
+      setCanCreateSubject(result.data.canCreateSubject)
+    }
+    setPermissionsLoading(false)
+  }
 
   const handleCopyAccessId = async () => {
     await navigator.clipboard.writeText(accessId)
@@ -205,6 +227,40 @@ export function ScholiumSettings({
     setLoading(false)
   }
 
+  const handleUpdatePermission = async (type: 'homework' | 'subject', value: boolean) => {
+    setError(null)
+    const newCanAddHomework = type === 'homework' ? value : canAddHomework
+    const newCanCreateSubject = type === 'subject' ? value : canCreateSubject
+
+    // Update local state immediately for better UX
+    if (type === 'homework') {
+      setCanAddHomework(value)
+    } else {
+      setCanCreateSubject(value)
+    }
+
+    const result = await updateDefaultPermissions(scholiumId, newCanAddHomework, newCanCreateSubject)
+    if (result.success) {
+      toast({
+        title: 'Permissions updated',
+        description: 'Default permissions have been updated successfully.',
+      })
+    } else {
+      // Revert on error
+      if (type === 'homework') {
+        setCanAddHomework(!value)
+      } else {
+        setCanCreateSubject(!value)
+      }
+      setError(result.error || 'Failed to update permissions')
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to update permissions',
+        variant: 'destructive',
+      })
+    }
+  }
+
   return (
     <>
       <Card>
@@ -276,6 +332,48 @@ export function ScholiumSettings({
                 </Button>
                 <p className="text-xs text-muted-foreground">
                   Change the display name of your scholium
+                </p>
+              </div>
+
+              {/* Default Join Permissions Section */}
+              <div className="space-y-3 pt-2 border-t">
+                <h4 className="text-sm font-semibold text-foreground">Default Join Permissions</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="can-add-homework" className="text-sm font-normal">
+                        Can add homework
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        New members can create homework assignments
+                      </p>
+                    </div>
+                    <Switch
+                      id="can-add-homework"
+                      checked={canAddHomework}
+                      onCheckedChange={(checked) => handleUpdatePermission('homework', checked)}
+                      disabled={permissionsLoading}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="can-create-subject" className="text-sm font-normal">
+                        Can create subjects
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        New members can create new subjects
+                      </p>
+                    </div>
+                    <Switch
+                      id="can-create-subject"
+                      checked={canCreateSubject}
+                      onCheckedChange={(checked) => handleUpdatePermission('subject', checked)}
+                      disabled={permissionsLoading}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Set default permissions for new members joining the scholium
                 </p>
               </div>
 
