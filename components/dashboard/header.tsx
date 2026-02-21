@@ -3,10 +3,9 @@
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { signOut } from "@/app/actions/auth"
-import { getScholiumDetails, renewScholiumAccessId } from "@/app/actions/scholium"
+import { getScholiumDetails } from "@/app/actions/scholium"
 import type { User } from "@/lib/db"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,15 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { BookOpen, LogOut, Settings, Shield, Grid3X3, Copy, RotateCw, Loader2 } from "lucide-react"
+import { BookOpen, LogOut, Settings, Shield, Grid3X3 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 interface ScholiumDetails {
@@ -40,9 +31,6 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ user, scholiumId }: DashboardHeaderProps) {
   const [scholiumDetails, setScholiumDetails] = useState<ScholiumDetails | null>(null)
-  const [renewing, setRenewing] = useState(false)
-  const [openAccessDialog, setOpenAccessDialog] = useState(false)
-  const { toast } = useToast()
 
   useEffect(() => {
     loadScholiumDetails()
@@ -57,25 +45,6 @@ export function DashboardHeader({ user, scholiumId }: DashboardHeaderProps) {
         isHost: result.data.isHost,
       })
     }
-  }
-
-  async function handleCopyAccessId() {
-    if (scholiumDetails?.accessId) {
-      await navigator.clipboard.writeText(scholiumDetails.accessId)
-      toast({
-        title: "Access ID copied!",
-        description: "Share this ID with others to invite them.",
-      })
-    }
-  }
-
-  async function handleRenewAccessId() {
-    setRenewing(true)
-    const result = await renewScholiumAccessId(scholiumId)
-    if (result.success) {
-      await loadScholiumDetails()
-    }
-    setRenewing(false)
   }
 
   const initials = user.name
@@ -101,57 +70,12 @@ export function DashboardHeader({ user, scholiumId }: DashboardHeaderProps) {
 
           {/* Admin's view */}
           {user.role !== "admin" && (
-            <>
-              <Dialog open={openAccessDialog} onOpenChange={setOpenAccessDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 bg-transparent" onClick={() => setOpenAccessDialog(true)}>
-                    <Grid3X3 className="h-4 w-4" />
-                    Access ID
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Scholium Access</DialogTitle>
-                    <DialogDescription>
-                      Share this Access ID with others to invite them to your scholium
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 p-3 bg-muted rounded-md font-mono text-sm">
-                        {scholiumDetails?.accessId || "Loading..."}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleCopyAccessId}
-                        disabled={!scholiumDetails?.accessId}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    {scholiumDetails?.isHost && (
-                      <Button
-                        type="button"
-                        className="w-full"
-                        onClick={handleRenewAccessId}
-                        disabled={renewing}
-                      >
-                        {renewing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Renew Access ID
-                      </Button>
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <Link href="/scholiums">
-                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                  <Grid3X3 className="h-4 w-4" />
-                  Scholiums
-                </Button>
-              </Link>
-            </>
+            <Link href="/scholiums">
+              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                <Grid3X3 className="h-4 w-4" />
+                Scholiums
+              </Button>
+            </Link>
           )}
 
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Users, Crown, Shield, UserMinus, Trash2, LogOut, UserCog } from 'lucide-react'
+import { Users, Crown, Shield, UserMinus, LogOut } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,20 +16,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
 import type { ScholiumMember } from '@/lib/scholium'
 import { 
-  deleteScholium, 
   quitScholium, 
-  transferHost, 
   toggleCohost,
   removeScholiumMemberAsHost
 } from '@/app/actions/scholium'
@@ -46,11 +36,8 @@ interface ParticipantsSectionProps {
 
 export function ParticipantsSection({ scholiumId, members, currentUserId, isHost }: ParticipantsSectionProps) {
   const router = useRouter()
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [quitDialogOpen, setQuitDialogOpen] = useState(false)
-  const [transferDialogOpen, setTransferDialogOpen] = useState(false)
   const [removeMemberDialogOpen, setRemoveMemberDialogOpen] = useState(false)
-  const [selectedNewHost, setSelectedNewHost] = useState<string>('')
   const [memberToRemove, setMemberToRemove] = useState<{ id: number; name: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -62,20 +49,6 @@ export function ParticipantsSection({ scholiumId, members, currentUserId, isHost
   const hosts = members.filter((m) => m.is_host)
   const cohosts = members.filter((m) => m.is_cohost && !m.is_host)
   const participants = members.filter((m) => !m.is_host && !m.is_cohost)
-
-  const handleDeleteScholium = async () => {
-    setLoading(true)
-    setError(null)
-    const result = await deleteScholium(scholiumId)
-    if (result.success) {
-      router.push('/scholiums')
-      router.refresh()
-    } else {
-      setError(result.error || 'Failed to delete scholium')
-    }
-    setLoading(false)
-    setDeleteDialogOpen(false)
-  }
 
   const handleQuitScholium = async () => {
     setLoading(true)
@@ -89,21 +62,6 @@ export function ParticipantsSection({ scholiumId, members, currentUserId, isHost
     }
     setLoading(false)
     setQuitDialogOpen(false)
-  }
-
-  const handleTransferHost = async () => {
-    if (!selectedNewHost) return
-    setLoading(true)
-    setError(null)
-    const result = await transferHost(scholiumId, selectedNewHost)
-    if (result.success) {
-      router.refresh()
-      setTransferDialogOpen(false)
-      setSelectedNewHost('')
-    } else {
-      setError(result.error || 'Failed to transfer host')
-    }
-    setLoading(false)
   }
 
   const handleToggleCohost = async (memberId: number, currentStatus: boolean) => {
@@ -254,32 +212,8 @@ export function ParticipantsSection({ scholiumId, members, currentUserId, isHost
           )}
 
           {/* Action Buttons */}
-          <div className="pt-3 border-t flex flex-col gap-2">
-            {isHost && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setTransferDialogOpen(true)}
-                  disabled={loading || members.length <= 1}
-                  className="w-full justify-start"
-                >
-                  <UserCog className="h-4 w-4 mr-2" />
-                  Transfer Host Role
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setDeleteDialogOpen(true)}
-                  disabled={loading}
-                  className="w-full justify-start"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Scholium
-                </Button>
-              </>
-            )}
-            {!isHost && (
+          {!isHost && (
+            <div className="pt-3 border-t">
               <Button
                 variant="outline"
                 size="sm"
@@ -290,28 +224,10 @@ export function ParticipantsSection({ scholiumId, members, currentUserId, isHost
                 <LogOut className="h-4 w-4 mr-2" />
                 Quit Scholium
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      {/* Delete Scholium Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Scholium?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the scholium and all its data including homework, subjects, and members. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteScholium} disabled={loading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Quit Scholium Dialog */}
       <AlertDialog open={quitDialogOpen} onOpenChange={setQuitDialogOpen}>
@@ -330,40 +246,6 @@ export function ParticipantsSection({ scholiumId, members, currentUserId, isHost
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Transfer Host Dialog */}
-      <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Transfer Host Role</DialogTitle>
-            <DialogDescription>
-              Select a member to become the new host. You will become a regular member.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Select value={selectedNewHost} onValueChange={setSelectedNewHost}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select new host..." />
-              </SelectTrigger>
-              <SelectContent>
-                {members
-                  .filter(m => m.user_id !== currentUserId)
-                  .map(m => (
-                    <SelectItem key={m.user_id} value={m.user_id}>
-                      {m.user_name} ({m.user_email})
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleTransferHost} disabled={loading || !selectedNewHost}>
-              Transfer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Remove Member Dialog */}
       <AlertDialog open={removeMemberDialogOpen} onOpenChange={setRemoveMemberDialogOpen}>
