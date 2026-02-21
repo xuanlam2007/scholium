@@ -718,11 +718,7 @@ export async function deleteScholium(scholiumId: number): Promise<{ success: boo
       .eq('id', scholiumId)
 
     if (error) {
-<<<<<<< HEAD
       console.error('Error deleting scholium:', error)
-=======
-      console.error('[v0] Error deleting scholium:', error)
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
       return { success: false, error: 'Failed to delete scholium' }
     }
 
@@ -737,11 +733,7 @@ export async function deleteScholium(scholiumId: number): Promise<{ success: boo
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {
-<<<<<<< HEAD
     console.error('Error deleting scholium:', error)
-=======
-    console.error('[v0] Error deleting scholium:', error)
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
     return { success: false, error: 'Failed to delete scholium' }
   }
 }
@@ -779,11 +771,7 @@ export async function quitScholium(scholiumId: number): Promise<{ success: boole
       .eq('id', member.id)
 
     if (error) {
-<<<<<<< HEAD
       console.error('Error quitting scholium:', error)
-=======
-      console.error('[v0] Error quitting scholium:', error)
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
       return { success: false, error: 'Failed to quit scholium' }
     }
 
@@ -798,11 +786,7 @@ export async function quitScholium(scholiumId: number): Promise<{ success: boole
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {
-<<<<<<< HEAD
     console.error('Error quitting scholium:', error)
-=======
-    console.error('[v0] Error quitting scholium:', error)
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
     return { success: false, error: 'Failed to quit scholium' }
   }
 }
@@ -849,11 +833,7 @@ export async function transferHost(scholiumId: number, newHostUserId: string): P
       .eq('id', currentHost.id)
 
     if (demoteError) {
-<<<<<<< HEAD
       console.error('Error demoting current host:', demoteError)
-=======
-      console.error('[v0] Error demoting current host:', demoteError)
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
       return { success: false, error: 'Failed to transfer host role' }
     }
 
@@ -868,22 +848,14 @@ export async function transferHost(scholiumId: number, newHostUserId: string): P
       .eq('id', newHost.id)
 
     if (promoteError) {
-<<<<<<< HEAD
       console.error('Error promoting new host:', promoteError)
-=======
-      console.error('[v0] Error promoting new host:', promoteError)
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
       return { success: false, error: 'Failed to transfer host role' }
     }
 
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {
-<<<<<<< HEAD
     console.error('Error transferring host:', error)
-=======
-    console.error('[v0] Error transferring host:', error)
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
     return { success: false, error: 'Failed to transfer host role' }
   }
 }
@@ -937,22 +909,14 @@ export async function toggleCohost(memberId: number, isCohost: boolean): Promise
       .eq('id', memberId)
 
     if (error) {
-<<<<<<< HEAD
       console.error('Error toggling co-host:', error)
-=======
-      console.error('[v0] Error toggling co-host:', error)
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
       return { success: false, error: 'Failed to update co-host status' }
     }
 
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {
-<<<<<<< HEAD
     console.error('Error toggling co-host:', error)
-=======
-    console.error('[v0] Error toggling co-host:', error)
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
     return { success: false, error: 'Failed to update co-host status' }
   }
 }

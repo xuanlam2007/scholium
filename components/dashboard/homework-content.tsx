@@ -31,10 +31,6 @@ export function HomeworkContent({
   members,
   onSubjectsChange,
 }: HomeworkContentProps) {
-<<<<<<< HEAD
-=======
-  // Enable real-time updates and member check (redirects if kicked)
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
   useRealtimeRefresh(scholiumId, currentUserId)
 
   const [viewMode, setViewMode] = useState<"list" | "timetable">("list")

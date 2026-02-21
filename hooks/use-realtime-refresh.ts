@@ -4,15 +4,6 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-<<<<<<< HEAD
-=======
-/** 
- * Hook that listens to Supabase Realtime database changes and refreshes the UI
- * This provides instant updates across all users in the same scholium
- * Uses Supabase's native realtime subscriptions - no polling or SSE required
- * Also checks if current user is still a member and redirects if kicked
- */
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
 export function useRealtimeRefresh(scholiumId: number, userId: string) {
   const router = useRouter()
 
@@ -37,16 +28,8 @@ export function useRealtimeRefresh(scholiumId: number, userId: string) {
         window.location.href = '/scholiums'
       }
     }
-<<<<<<< HEAD
     checkMembershipAndRedirect()
 
-=======
-
-    // Initial membership check on mount
-    checkMembershipAndRedirect()
-
-    // Create a single channel for all realtime events
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
     const channelName = `scholium-${scholiumId}`
     const channel = supabase.channel(channelName)
       // Listen to homework changes
@@ -80,20 +63,12 @@ export function useRealtimeRefresh(scholiumId: number, userId: string) {
           table: 'scholium_members',
         },
         async () => {
-<<<<<<< HEAD
-=======
-          // After any member deletion, immediately check if current user still exists
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
           await checkMembershipAndRedirect()
           if (!isRedirecting) {
             router.refresh()
           }
         }
       )
-<<<<<<< HEAD
-=======
-      // Listen to INSERT/UPDATE events on scholium_members for UI updates
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
       .on(
         'postgres_changes',
         {
@@ -138,22 +113,12 @@ export function useRealtimeRefresh(scholiumId: number, userId: string) {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-<<<<<<< HEAD
         } else if (status === 'CHANNEL_ERROR') {
-=======
-          // Successfully connected to realtime
-        } else if (status === 'CHANNEL_ERROR') {
-          // Retry on error
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
           checkMembershipAndRedirect()
         }
       })
 
-<<<<<<< HEAD
     // Cleanup
-=======
-    // Cleanup when component unmounts
->>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
     return () => {
       channel.unsubscribe()
     }
