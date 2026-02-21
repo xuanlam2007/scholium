@@ -1,7 +1,4 @@
-// Supabase Realtime Integration
-// This module provides real-time subscription utilities using Supabase's native realtime features
-// No polling or SSE required - Supabase handles everything automatically
-
+// Supabase Realtime
 import { createClient } from '@/lib/supabase/client'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -9,10 +6,11 @@ export type RealtimeChangeType = 'homework' | 'subject' | 'member' | 'permission
 
 /**
  * Subscribe to real-time changes for a specific scholium
- * @param scholiumId - The scholium ID to subscribe to
- * @param onChange - Callback function triggered when data changes
- * @returns Unsubscribe function to clean up the subscription
+ * @param scholiumId - scholium ID 
+ * @param onChange - Call function
+ * @returns Unsubscribe function to clean up
  */
+
 export function subscribeToScholiumChanges(
   scholiumId: number,
   onChange: (changeType: RealtimeChangeType) => void
@@ -21,7 +19,7 @@ export function subscribeToScholiumChanges(
 
   const channels: RealtimeChannel[] = []
 
-  // Subscribe to homework changes
+  // Subscribe to homework
   const homeworkChannel = supabase
     .channel(`scholium_${scholiumId}_homework`)
     .on(
@@ -33,7 +31,6 @@ export function subscribeToScholiumChanges(
         filter: `scholium_id=eq.${scholiumId}`,
       },
       () => {
-        console.log('[v0] Homework changed in scholium', scholiumId)
         onChange('homework')
       }
     )
@@ -41,7 +38,7 @@ export function subscribeToScholiumChanges(
 
   channels.push(homeworkChannel)
 
-  // Subscribe to homework completion changes
+  // Subscribe to homework completion
   const completionChannel = supabase
     .channel(`scholium_${scholiumId}_completion`)
     .on(
@@ -52,7 +49,6 @@ export function subscribeToScholiumChanges(
         table: 'homework_completion',
       },
       () => {
-        console.log('[v0] Homework completion changed')
         onChange('completion')
       }
     )
@@ -60,7 +56,7 @@ export function subscribeToScholiumChanges(
 
   channels.push(completionChannel)
 
-  // Subscribe to subject changes (subjects are global, not per-scholium)
+  // Subscribe to subject (global)
   const subjectChannel = supabase
     .channel(`scholium_${scholiumId}_subjects`)
     .on(
@@ -71,7 +67,6 @@ export function subscribeToScholiumChanges(
         table: 'subjects',
       },
       () => {
-        console.log('[v0] Subject changed')
         onChange('subject')
       }
     )
@@ -91,9 +86,7 @@ export function subscribeToScholiumChanges(
         filter: `scholium_id=eq.${scholiumId}`,
       },
       (payload) => {
-        console.log('[v0] Member changed in scholium', scholiumId, payload)
         if (payload.eventType === 'UPDATE') {
-          // Check if permissions were updated
           onChange('permissions')
         } else {
           onChange('member')
@@ -104,7 +97,7 @@ export function subscribeToScholiumChanges(
 
   channels.push(memberChannel)
 
-  // Subscribe to scholium settings changes (including time slots)
+  // Subscribe to scholium settings
   const scholiumChannel = supabase
     .channel(`scholium_${scholiumId}_settings`)
     .on(
@@ -116,7 +109,6 @@ export function subscribeToScholiumChanges(
         filter: `id=eq.${scholiumId}`,
       },
       () => {
-        console.log('[v0] Scholium settings changed', scholiumId)
         onChange('timeslots')
       }
     )
@@ -124,7 +116,7 @@ export function subscribeToScholiumChanges(
 
   channels.push(scholiumChannel)
 
-  // Subscribe to attachment changes for all homework in this scholium
+  // Subscribe to attachment
   const attachmentChannel = supabase
     .channel(`scholium_${scholiumId}_attachments`)
     .on(
@@ -135,7 +127,6 @@ export function subscribeToScholiumChanges(
         table: 'attachments',
       },
       () => {
-        console.log('[v0] Attachment changed')
         onChange('homework')
       }
     )
@@ -143,21 +134,14 @@ export function subscribeToScholiumChanges(
 
   channels.push(attachmentChannel)
 
-  // Return cleanup function
+  // Cleanup
   return () => {
-    console.log('[v0] Unsubscribing from scholium changes', scholiumId)
     channels.forEach((channel) => {
       supabase.removeChannel(channel)
     })
   }
 }
 
-/**
- * Legacy function for backward compatibility
- * No longer needed with Supabase Realtime, but kept to avoid breaking changes
- */
 export async function broadcastChange(scholiumId: number, type: RealtimeChangeType): Promise<void> {
-  // With Supabase Realtime, database changes automatically trigger subscriptions
-  // This function is now a no-op but kept for compatibility
-  console.log('[v0] Database change will be automatically broadcast:', scholiumId, type)
+  // ko co gi de lam o day, supabase tu dong phat hien thay doi va gui den client
 }

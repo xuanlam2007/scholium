@@ -16,7 +16,7 @@ export async function getAllUsers(): Promise<User[]> {
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('[v0] Error fetching all users:', error)
+    console.error('Error fetching all users:', error)
     return []
   }
 
@@ -45,7 +45,7 @@ export async function getAllScholiums() {
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('[v0] Error fetching all scholiums:', error)
+    console.error('Error fetching all scholiums:', error)
     return []
   }
 
@@ -71,7 +71,7 @@ export async function deleteScholium(scholiumId: number) {
     .eq('id', scholiumId)
 
   if (error) {
-    console.error('[v0] Error deleting scholium:', error)
+    console.error('Error deleting scholium:', error)
     return { success: false, error: 'Failed to delete scholium' }
   }
 
@@ -90,7 +90,7 @@ export async function updateUserRole(userId: string, role: "admin" | "student") 
     .eq('id', userId)
 
   if (error) {
-    console.error('[v0] Error updating user role:', error)
+    console.error('Error updating user role:', error)
     return { success: false, error: 'Failed to update user role' }
   }
 
@@ -107,11 +107,9 @@ export async function deleteUser(userId: string) {
   const { error: authError } = await supabase.auth.admin.deleteUser(userId)
 
   if (authError) {
-    console.error('[v0] Error deleting user from auth:', authError)
-    // Continue even if auth deletion fails - might not have admin access
+    console.error('Error deleting user from auth:', authError)
   }
 
-  // The database trigger will handle cascading deletes in public.users
   revalidatePath("/admin")
   return { success: true }
 }
@@ -143,7 +141,7 @@ export async function createUser(formData: FormData) {
   })
 
   if (authError) {
-    console.error('[v0] Error creating user:', authError)
+    console.error('Error creating user:', authError)
     if (authError.message.includes('already registered')) {
       return { error: "Email already registered" }
     }
@@ -180,11 +178,11 @@ export async function getScholiumMembers(scholiumId: number) {
     .order('joined_at', { ascending: true })
 
   if (error) {
-    console.error('[v0] Error fetching scholium members:', error)
+    console.error('Error fetching scholium members:', error)
     return []
   }
 
-  // Transform data to match expected format
+  // Transform data to match format
   return data.map((member: any) => ({
     id: member.id,
     user_id: member.user_id,
@@ -210,7 +208,7 @@ export async function removeScholiumMember(memberId: number) {
     .eq('id', memberId)
 
   if (error) {
-    console.error('[v0] Error removing scholium member:', error)
+    console.error('Error removing scholium member:', error)
     return { success: false, error: 'Failed to remove member' }
   }
 
@@ -238,7 +236,7 @@ export async function updateScholiumMemberPermissions(
     .eq('id', memberId)
 
   if (error) {
-    console.error('[v0] Error updating permissions:', error)
+    console.error('Error updating permissions:', error)
     return { success: false, error: 'Failed to update permissions' }
   }
 
@@ -265,12 +263,10 @@ export async function getAllUsersForScholium(scholiumId: number) {
     .select('id, name, email, role')
     .neq('role', 'admin')
     .order('name')
-
   if (error) {
-    console.error('[v0] Error fetching users for scholium:', error)
+    console.error('Error fetching users for scholium:', error)
     return []
   }
-
   // Filter out existing members
   return data.filter((user: any) => !memberIds.includes(user.id))
 }
@@ -291,7 +287,7 @@ export async function addMemberToScholium(scholiumId: number, userId: string) {
     })
 
   if (error) {
-    console.error('[v0] Error adding member to scholium:', error)
+    console.error('Error adding member to scholium:', error)
     return { success: false, error: 'Failed to add member' }
   }
 
@@ -310,9 +306,8 @@ export async function transferScholiumHost(scholiumId: number, newHostMemberId: 
     .update({ is_host: false })
     .eq('scholium_id', scholiumId)
     .eq('is_host', true)
-
   if (removeError) {
-    console.error('[v0] Error removing old host:', removeError)
+    console.error('Error removing old host:', removeError)
     return { success: false, error: 'Failed to transfer host' }
   }
 
@@ -327,7 +322,7 @@ export async function transferScholiumHost(scholiumId: number, newHostMemberId: 
     .eq('id', newHostMemberId)
 
   if (setError) {
-    console.error('[v0] Error setting new host:', setError)
+    console.error('Error setting new host:', setError)
     return { success: false, error: 'Failed to transfer host' }
   }
 
@@ -337,7 +332,6 @@ export async function transferScholiumHost(scholiumId: number, newHostMemberId: 
 
 export async function getAdminStats() {
   await requireAdmin()
-
   const supabase = await createClient()
 
   const [

@@ -2,31 +2,125 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { subscribeToScholiumChanges } from '@/lib/realtime'
+import { createClient } from '@/lib/supabase/client'
 
-/** 
- * Hook that listens to Supabase Realtime database changes and refreshes the UI
- * This provides instant updates across all users in the same scholium
- * Uses Supabase's native realtime subscriptions - no polling or SSE required
- */
-export function useRealtimeRefresh(scholiumId: number) {
+export function useRealtimeRefresh(scholiumId: number, userId: string) {
   const router = useRouter()
 
   useEffect(() => {
-    if (!scholiumId) return
+    if (!scholiumId || !userId) return
 
-    console.log('[v0] Setting up realtime subscriptions for scholium', scholiumId)
+    const supabase = createClient()
+    let isRedirecting = false
 
-    // Subscribe to all changes in this scholium
-    const unsubscribe = subscribeToScholiumChanges(scholiumId, (changeType) => {
-      console.log('[v0] Change detected, refreshing UI:', changeType)
-      router.refresh()
-    })
-
-    // Cleanup subscriptions when component unmounts or scholiumId changes
-    return () => {
-      console.log('[v0] Cleaning up realtime subscriptions for scholium', scholiumId)
-      unsubscribe()
+    const checkMembershipAndRedirect = async () => {
+      if (isRedirecting) return
+      
+      const { data } = await supabase
+        .from('scholium_members')
+        .select('id')
+        .eq('scholium_id', scholiumId)
+        .eq('user_id', userId)
+        .maybeSingle()
+      
+      if (!data) {
+        isRedirecting = true
+        window.location.href = '/scholiums'
+      }
     }
-  }, [scholiumId, router])
+    checkMembershipAndRedirect()
+
+    const channelName = `scholium-${scholiumId}`
+    const channel = supabase.channel(channelName)
+      // Listen to homework changes
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'homework',
+          filter: `scholium_id=eq.${scholiumId}`,
+        },
+        () => router.refresh()
+      )
+      // Listen to subject changes
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'subjects',
+          filter: `scholium_id=eq.${scholiumId}`,
+        },
+        () => router.refresh()
+      )
+      // Listen to DELETE events on scholium_members - check if current user was kicked
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'scholium_members',
+        },
+        async () => {
+          await checkMembershipAndRedirect()
+          if (!isRedirecting) {
+            router.refresh()
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'scholium_members',
+        },
+        () => router.refresh()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'scholium_members',
+        },
+        () => router.refresh()
+      )
+      // Listen to homework completion
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'homework_completion',
+        },
+        () => router.refresh()
+      )
+      // Listen to scholium deletion
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'scholiums',
+          filter: `id=eq.${scholiumId}`,
+        },
+        () => {
+          isRedirecting = true
+          window.location.href = '/scholiums'
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+        } else if (status === 'CHANNEL_ERROR') {
+          checkMembershipAndRedirect()
+        }
+      })
+
+    // Cleanup
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [scholiumId, userId, router])
 }

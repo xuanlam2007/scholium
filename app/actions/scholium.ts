@@ -30,7 +30,7 @@ export async function createScholium(name: string): Promise<{ success: boolean; 
       .single()
 
     if (error) {
-      console.error('[v0] Error creating scholium:', error)
+      console.error('Error creating scholium:', error)
       return { success: false, error: 'Failed to create scholium' }
     }
 
@@ -46,7 +46,7 @@ export async function createScholium(name: string): Promise<{ success: boolean; 
       })
 
     if (memberError) {
-      console.error('[v0] Error adding host member:', memberError)
+      console.error('Error adding host member:', memberError)
       return { success: false, error: 'Failed to add host member' }
     }
 
@@ -61,7 +61,7 @@ export async function createScholium(name: string): Promise<{ success: boolean; 
 
     return { success: true, data: scholium as Scholium }
   } catch (error) {
-    console.error('[v0] Error creating scholium:', error)
+    console.error('Error creating scholium:', error)
     return { success: false, error: 'Failed to create scholium' }
   }
 }
@@ -82,7 +82,7 @@ export async function joinScholium(accessId: string): Promise<{ success: boolean
       .select('*')
 
     if (error) {
-      console.error('[v0] Error fetching scholiums:', error)
+      console.error('Error fetching scholiums:', error)
       return { success: false, error: 'Failed to fetch scholiums' }
     }
 
@@ -137,7 +137,7 @@ export async function joinScholium(accessId: string): Promise<{ success: boolean
       })
 
     if (memberError) {
-      console.error('[v0] Error adding member:', memberError)
+      console.error('Error adding member:', memberError)
       return { success: false, error: 'Failed to join scholium' }
     }
 
@@ -152,7 +152,7 @@ export async function joinScholium(accessId: string): Promise<{ success: boolean
 
     return { success: true, data: scholium }
   } catch (error) {
-    console.error('[v0] Error joining scholium:', error)
+    console.error('Error joining scholium:', error)
     return { success: false, error: 'Failed to join scholium' }
   }
 }
@@ -183,7 +183,7 @@ export async function getUserScholiums(): Promise<Scholium[]> {
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('[v0] Error fetching scholiums:', error)
+      console.error('Error fetching scholiums:', error)
       return []
     }
 
@@ -195,7 +195,7 @@ export async function getUserScholiums(): Promise<Scholium[]> {
 
     return scholiums as Scholium[]
   } catch (error) {
-    console.error('[v0] Error fetching scholiums:', error)
+    console.error('Error fetching scholiums:', error)
     return []
   }
 }
@@ -217,6 +217,7 @@ export async function getScholiumMembers(scholiumId: number): Promise<(ScholiumM
         scholium_id,
         user_id,
         is_host,
+        is_cohost,
         can_add_homework,
         can_create_subject,
         joined_at,
@@ -227,10 +228,11 @@ export async function getScholiumMembers(scholiumId: number): Promise<(ScholiumM
       `)
       .eq('scholium_id', scholiumId)
       .order('is_host', { ascending: false })
+      .order('is_cohost', { ascending: false })
       .order('joined_at', { ascending: true })
 
     if (error) {
-      console.error('[v0] Error fetching members:', error)
+      console.error('Error fetching members:', error)
       return []
     }
 
@@ -240,6 +242,7 @@ export async function getScholiumMembers(scholiumId: number): Promise<(ScholiumM
       scholium_id: member.scholium_id,
       user_id: member.user_id,
       is_host: member.is_host,
+      is_cohost: member.is_cohost || false,
       can_add_homework: member.can_add_homework,
       can_create_subject: member.can_create_subject,
       joined_at: member.joined_at,
@@ -247,7 +250,7 @@ export async function getScholiumMembers(scholiumId: number): Promise<(ScholiumM
       user_email: member.users?.email || '',
     }))
   } catch (error) {
-    console.error('[v0] Error fetching members:', error)
+    console.error('Error fetching members:', error)
     return []
   }
 }
@@ -287,13 +290,13 @@ export async function renewScholiumAccessId(scholiumId: number): Promise<{ succe
       .eq('id', scholiumId)
 
     if (error) {
-      console.error('[v0] Error renewing access ID:', error)
+      console.error('Error renewing access ID:', error)
       return { success: false, error: 'Failed to renew access ID' }
     }
 
     return { success: true, newAccessId }
   } catch (error) {
-    console.error('[v0] Error renewing access ID:', error)
+    console.error('Error renewing access ID:', error)
     return { success: false, error: 'Failed to renew access ID' }
   }
 }
@@ -339,7 +342,7 @@ export async function setCurrentScholium(scholiumId: number): Promise<void> {
       sameSite: 'lax',
     })
   } catch (error) {
-    console.error('[v0] Error setting current scholium:', error)
+    console.error('Error setting current scholium:', error)
   }
 }
 
@@ -405,7 +408,7 @@ export async function getScholiumDetails(scholiumId: number): Promise<{
       },
     }
   } catch (error) {
-    console.error('[v0] Error fetching scholium details:', error)
+    console.error('Error fetching scholium details:', error)
     return { success: false, error: 'Failed to fetch scholium' }
   }
 }
@@ -447,14 +450,14 @@ export async function updateMemberPermissions(
       .eq('id', memberId)
 
     if (error) {
-      console.error('[v0] Error updating permissions:', error)
+      console.error('Error updating permissions:', error)
       return { success: false, error: 'Failed to update permissions' }
     }
 
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error updating member permissions:', error)
+    console.error('Error updating member permissions:', error)
     return { success: false, error: 'Failed to update permissions' }
   }
 }
@@ -505,14 +508,14 @@ export async function removeScholiumMemberAsHost(memberId: number): Promise<{ su
       .eq('id', memberId)
 
     if (deleteError) {
-      console.error('[v0] Error removing member:', deleteError)
+      console.error('Error removing member:', deleteError)
       return { success: false, error: 'Failed to remove member' }
     }
 
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error removing member:', error)
+    console.error('Error removing member:', error)
     return { success: false, error: 'Failed to remove member' }
   }
 }
@@ -569,7 +572,7 @@ export async function updateMemberPermissionsAsHost(
       .eq('id', memberId)
 
     if (error) {
-      console.error('[v0] Error updating permissions:', error)
+      console.error('Error updating permissions:', error)
       return { success: false, error: 'Failed to update permissions' }
     }
 
@@ -577,7 +580,7 @@ export async function updateMemberPermissionsAsHost(
     revalidatePath('/admin')
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error updating permissions:', error)
+    console.error('Error updating permissions:', error)
     return { success: false, error: 'Failed to update permissions' }
   }
 }
@@ -619,13 +622,13 @@ export async function updateTimeSlots(
       .eq('id', scholiumId)
 
     if (error) {
-      console.error('[v0] Error updating time slots:', error)
+      console.error('Error updating time slots:', error)
       return { success: false, error: 'Failed to update time slots' }
     }
 
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error updating time slots:', error)
+    console.error('Error updating time slots:', error)
     return { success: false, error: 'Failed to update time slots' }
   }
 }
@@ -672,7 +675,7 @@ export async function getTimeSlots(
 
     return slots
   } catch (error) {
-    console.error('[v0] Error fetching time slots:', error)
+    console.error('Error fetching time slots:', error)
     // Return default 6 slots on error
     return [
       { start: '07:00', end: '08:30' },
@@ -683,4 +686,250 @@ export async function getTimeSlots(
       { start: '16:30', end: '18:00' },
     ]
   }
+}
+
+/**
+ * Delete a scholium (host only)
+ */
+export async function deleteScholium(scholiumId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getSession()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    const supabase = await createClient()
+
+    // Check if user is the host
+    const { data: hostCheck } = await supabase
+      .from('scholium_members')
+      .select('id')
+      .eq('scholium_id', scholiumId)
+      .eq('user_id', user.id)
+      .eq('is_host', true)
+      .single()
+
+    if (!hostCheck) {
+      return { success: false, error: 'Only the host can delete the scholium' }
+    }
+
+    // Delete the scholium (CASCADE will delete all members, homework, etc.)
+    const { error } = await supabase
+      .from('scholiums')
+      .delete()
+      .eq('id', scholiumId)
+
+    if (error) {
+      console.error('Error deleting scholium:', error)
+      return { success: false, error: 'Failed to delete scholium' }
+    }
+
+    // Clear current scholium cookie if it's the one being deleted
+    const cookieStore = await cookies()
+    const currentId = cookieStore.get('current_scholium_id')?.value
+    if (currentId && parseInt(currentId) === scholiumId) {
+      cookieStore.delete('current_scholium_id')
+    }
+
+    revalidatePath('/scholiums')
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting scholium:', error)
+    return { success: false, error: 'Failed to delete scholium' }
+  }
+}
+
+/**
+ * Quit a scholium (member only, not host)
+ */
+export async function quitScholium(scholiumId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getSession()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    const supabase = await createClient()
+
+    // Get member info
+    const { data: member } = await supabase
+      .from('scholium_members')
+      .select('id, is_host')
+      .eq('scholium_id', scholiumId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!member) {
+      return { success: false, error: 'Not a member of this scholium' }
+    }
+
+    if (member.is_host) {
+      return { success: false, error: 'Hosts cannot quit. Transfer host role first or delete the scholium.' }
+    }
+
+    // Remove member
+    const { error } = await supabase
+      .from('scholium_members')
+      .delete()
+      .eq('id', member.id)
+
+    if (error) {
+      console.error('Error quitting scholium:', error)
+      return { success: false, error: 'Failed to quit scholium' }
+    }
+
+    // Clear current scholium cookie if it's the one being quit
+    const cookieStore = await cookies()
+    const currentId = cookieStore.get('current_scholium_id')?.value
+    if (currentId && parseInt(currentId) === scholiumId) {
+      cookieStore.delete('current_scholium_id')
+    }
+
+    revalidatePath('/scholiums')
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('Error quitting scholium:', error)
+    return { success: false, error: 'Failed to quit scholium' }
+  }
+}
+
+/**
+ * Transfer host role to another member (current host only)
+ */
+export async function transferHost(scholiumId: number, newHostUserId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getSession()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    const supabase = await createClient()
+
+    // Check if current user is the host
+    const { data: currentHost } = await supabase
+      .from('scholium_members')
+      .select('id')
+      .eq('scholium_id', scholiumId)
+      .eq('user_id', user.id)
+      .eq('is_host', true)
+      .single()
+
+    if (!currentHost) {
+      return { success: false, error: 'Only the host can transfer their role' }
+    }
+
+    // Check if new host is a member
+    const { data: newHost } = await supabase
+      .from('scholium_members')
+      .select('id')
+      .eq('scholium_id', scholiumId)
+      .eq('user_id', newHostUserId)
+      .single()
+
+    if (!newHost) {
+      return { success: false, error: 'New host must be a member of the scholium' }
+    }
+
+    // Transfer host role (make old host a regular member, new member the host)
+    const { error: demoteError } = await supabase
+      .from('scholium_members')
+      .update({ is_host: false, is_cohost: false })
+      .eq('id', currentHost.id)
+
+    if (demoteError) {
+      console.error('Error demoting current host:', demoteError)
+      return { success: false, error: 'Failed to transfer host role' }
+    }
+
+    const { error: promoteError } = await supabase
+      .from('scholium_members')
+      .update({ 
+        is_host: true, 
+        is_cohost: false,
+        can_add_homework: true,
+        can_create_subject: true
+      })
+      .eq('id', newHost.id)
+
+    if (promoteError) {
+      console.error('Error promoting new host:', promoteError)
+      return { success: false, error: 'Failed to transfer host role' }
+    }
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('Error transferring host:', error)
+    return { success: false, error: 'Failed to transfer host role' }
+  }
+}
+
+/**
+ * Toggle co-host status for a member (host only)
+ */
+export async function toggleCohost(memberId: number, isCohost: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getSession()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    const supabase = await createClient()
+
+    // Get member info
+    const { data: member } = await supabase
+      .from('scholium_members')
+      .select('scholium_id, is_host')
+      .eq('id', memberId)
+      .single()
+
+    if (!member) {
+      return { success: false, error: 'Member not found' }
+    }
+
+    // Can't make host a co-host
+    if (member.is_host) {
+      return { success: false, error: 'Cannot change host status' }
+    }
+
+    // Check if current user is host
+    const { data: hostCheck } = await supabase
+      .from('scholium_members')
+      .select('id, is_cohost')
+      .eq('scholium_id', member.scholium_id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!hostCheck || (!hostCheck.is_cohost && !await isUserHost(supabase, member.scholium_id, user.id))) {
+      return { success: false, error: 'Only hosts can manage co-hosts' }
+    }
+
+    // Update co-host status and grant all permissions if making co-host
+    const { error } = await supabase
+      .from('scholium_members')
+      .update({ 
+        is_cohost: isCohost,
+        can_add_homework: isCohost ? true : undefined,
+        can_create_subject: isCohost ? true : undefined
+      })
+      .eq('id', memberId)
+
+    if (error) {
+      console.error('Error toggling co-host:', error)
+      return { success: false, error: 'Failed to update co-host status' }
+    }
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('Error toggling co-host:', error)
+    return { success: false, error: 'Failed to update co-host status' }
+  }
+}
+
+// Helper function to check if user is host
+async function isUserHost(supabase: any, scholiumId: number, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('scholium_members')
+    .select('is_host')
+    .eq('scholium_id', scholiumId)
+    .eq('user_id', userId)
+    .eq('is_host', true)
+    .single()
+
+  return !!data
 }

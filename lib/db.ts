@@ -1,9 +1,5 @@
-// Type definitions for database entities
-// This file only contains types - no server or client imports
-// Server components/actions should use: import { createClient } from "@/lib/supabase/server"
-// Client components should use: import { createClient } from "@/lib/supabase/client"
 export type User = {
-  id: string // Changed from number to string for UUID
+  id: string
   email: string
   name: string
   role: "admin" | "student"
@@ -28,7 +24,7 @@ export type Homework = {
   homework_type: string | null
   start_time: string | null
   end_time: string | null
-  created_by: string | null // Changed from number to string for UUID
+  created_by: string | null
   scholium_id: number
   created_at: string
   completed?: boolean
@@ -53,6 +49,6 @@ export type Attachment = {
   file_name: string
   file_url: string
   file_size: number | null
-  uploaded_by: string | null // Changed from number to string for UUID
+  uploaded_by: string | null
   created_at: string
 }

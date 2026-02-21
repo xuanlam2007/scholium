@@ -26,7 +26,7 @@ export async function updateUserProfile({
       })
 
       if (authError) {
-        console.error('[v0] Error updating auth metadata:', authError)
+        console.error('Error updating auth metadata:', authError)
         return { success: false, error: 'Failed to update profile' }
       }
 
@@ -37,13 +37,13 @@ export async function updateUserProfile({
         .eq('id', user.id)
 
       if (dbError) {
-        console.error('[v0] Error updating user profile:', dbError)
+        console.error('Error updating user profile:', dbError)
       }
     }
 
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error updating profile:', error)
+    console.error('Error updating profile:', error)
     return { success: false, error: 'Failed to update profile' }
   }
 }
@@ -80,13 +80,11 @@ export async function changePassword({
     })
 
     if (updateError) {
-      console.error('[v0] Error changing password:', updateError)
       return { success: false, error: 'Failed to change password' }
     }
 
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error changing password:', error)
     return { success: false, error: 'Failed to change password' }
   }
 }
@@ -105,13 +103,11 @@ export async function sendPasswordResetEmail(
     })
 
     if (error) {
-      console.error('[v0] Error sending reset email:', error)
       return { success: false, error: 'Failed to send reset email' }
     }
 
     return { success: true }
   } catch (error) {
-    console.error('[v0] Error sending reset email:', error)
     return { success: false, error: 'Failed to send reset email' }
   }
 }

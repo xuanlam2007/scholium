@@ -19,7 +19,7 @@ export async function getSubjects(): Promise<Subject[]> {
     .order('name')
 
   if (error) {
-    console.error('[v0] Error fetching subjects:', error)
+    console.error('Error fetching subjects:', error)
     return []
   }
 
@@ -52,7 +52,7 @@ export async function getHomework(): Promise<Homework[]> {
     .order('start_time', { ascending: true })
 
   if (error) {
-    console.error('[v0] Error fetching homework:', error)
+    console.error('Error fetching homework:', error)
     return []
   }
 
@@ -91,7 +91,7 @@ export async function getHomeworkById(id: number): Promise<Homework | null> {
     .single()
 
   if (error) {
-    console.error('[v0] Error fetching homework by id:', error)
+    console.error('Error fetching homework by id:', error)
     return null
   }
 
@@ -156,7 +156,7 @@ export async function createHomework(formData: FormData) {
     })
 
   if (error) {
-    console.error('[v0] Error creating homework:', error)
+    console.error('Error creating homework:', error)
     return { error: "Failed to create homework" }
   }
 
@@ -215,7 +215,7 @@ export async function updateHomework(id: number, formData: FormData) {
     .eq('id', id)
 
   if (error) {
-    console.error('[v0] Error updating homework:', error)
+    console.error('Error updating homework:', error)
     return { error: "Failed to update homework" }
   }
 
@@ -254,7 +254,7 @@ export async function deleteHomework(id: number) {
     .eq('id', id)
 
   if (error) {
-    console.error('[v0] Error deleting homework:', error)
+    console.error('Error deleting homework:', error)
     return { error: "Failed to delete homework" }
   }
 
@@ -288,7 +288,7 @@ export async function toggleHomeworkCompletion(homeworkId: number) {
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('[v0] Error deleting completion:', error)
+      console.error('Error deleting completion:', error)
       return { error: "Failed to update completion" }
     }
   } else {
@@ -303,7 +303,7 @@ export async function toggleHomeworkCompletion(homeworkId: number) {
       })
 
     if (error) {
-      console.error('[v0] Error creating completion:', error)
+      console.error('Error creating completion:', error)
       return { error: "Failed to update completion" }
     }
   }
@@ -322,7 +322,7 @@ export async function getAttachments(homeworkId: number): Promise<Attachment[]> 
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('[v0] Error fetching attachments:', error)
+    console.error('Error fetching attachments:', error)
     return []
   }
 
@@ -365,7 +365,7 @@ export async function addAttachment(homeworkId: number, fileName: string, fileUr
     })
 
   if (error) {
-    console.error('[v0] Error adding attachment:', error)
+    console.error('Error adding attachment:', error)
     return { error: "Failed to add attachment" }
   }
 
@@ -408,7 +408,7 @@ export async function deleteAttachment(id: number) {
     .eq('id', id)
 
   if (error) {
-    console.error('[v0] Error deleting attachment:', error)
+    console.error('Error deleting attachment:', error)
     return { error: "Failed to delete attachment" }
   }
 
@@ -460,7 +460,7 @@ export async function createSubject(name: string, color: string) {
     })
 
   if (error) {
-    console.error('[v0] Error creating subject:', error)
+    console.error('Error creating subject:', error)
     return { error: "Failed to create subject", success: false }
   }
 
@@ -506,7 +506,7 @@ export async function updateSubject(id: number, name: string, color: string) {
     .eq('id', id)
 
   if (error) {
-    console.error('[v0] Error updating subject:', error)
+    console.error('Error updating subject:', error)
     return { error: "Failed to update subject", success: false }
   }
 
@@ -558,7 +558,7 @@ export async function deleteSubject(id: number) {
     .eq('id', id)
 
   if (error) {
-    console.error('[v0] Error deleting subject:', error)
+    console.error('Error deleting subject:', error)
     return { error: "Failed to delete subject", success: false }
   }
 
@@ -598,7 +598,7 @@ export async function getUpcomingDeadlines(): Promise<Homework[]> {
     .limit(5)
 
   if (error) {
-    console.error('[v0] Error fetching upcoming deadlines:', error)
+    console.error('Error fetching upcoming deadlines:', error)
     return []
   }
 

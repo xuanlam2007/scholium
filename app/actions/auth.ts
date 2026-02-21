@@ -1,5 +1,4 @@
 "use server"
-
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 
@@ -18,7 +17,7 @@ export async function signUp(formData: FormData) {
 
   const supabase = await createClient()
 
-  // Sign up the user with Supabase Auth
+  // Sign up the user
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
@@ -33,13 +32,12 @@ export async function signUp(formData: FormData) {
   })
 
   if (authError) {
-    console.error('[v0] Sign up error:', authError)
     if (authError.message.includes('already registered')) {
       return { error: "Email already registered" }
     }
     if (authError.message.includes('rate limit') || authError.message.includes('Email rate limit exceeded')) {
       return { 
-        error: "Too many sign up attempts. Please wait a few minutes and try again, or contact support." 
+        error: "Too many sign up attempts. Please wait a few minutes and try again." 
       }
     }
     return { error: authError.message }
@@ -51,9 +49,8 @@ export async function signUp(formData: FormData) {
 
   // Check if email confirmation is required
   if (authData.session) {
-    // User is logged in immediately (email confirmation disabled)
-    // The database trigger automatically creates the user profile
-    console.log('[v0] User signed up successfully:', authData.user.email)
+    // Log in immediately (disable email confirmation)
+    // Database automatically creates the user profile
     redirect("/scholiums")
   } else {
     // Email confirmation required
@@ -67,20 +64,16 @@ export async function signUp(formData: FormData) {
 export async function signIn(formData: FormData) {
   const email = formData.get("email") as string
   const password = formData.get("password") as string
-
   if (!email || !password) {
     return { error: "Email and password are required" }
   }
-
   const supabase = await createClient()
-
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
 
   if (error) {
-    console.error('[v0] Sign in error:', error)
     return { error: "Invalid email or password" }
   }
 
@@ -88,7 +81,7 @@ export async function signIn(formData: FormData) {
     return { error: "Invalid email or password" }
   }
 
-  // Check role from auth user metadata (set during signup)
+  // Check role
   const role = data.user.user_metadata?.role
 
   if (role === "admin") {
