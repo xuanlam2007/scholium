@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { BookOpen, LogOut, Settings, Shield, Grid3X3, Copy, Loader2 } from "lucide-react"
+import { BookOpen, LogOut, Settings, Shield, Grid3X3, Copy, Loader2, RotateCw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { ScholiumSettings } from "@/components/dashboard/scholium-settings"
@@ -115,49 +115,41 @@ export function DashboardHeader({ user, scholiumId }: DashboardHeaderProps) {
           {/* Admin's view */}
           {user.role !== "admin" && (
             <>
-              <Dialog open={openAccessDialog} onOpenChange={setOpenAccessDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                    <Grid3X3 className="h-4 w-4" />
-                    Access ID
+              {/* Access ID Box */}
+              <div className="flex items-center gap-2 px-3 py-2 border border-border rounded-md bg-muted/50">
+                <Grid3X3 className="h-4 w-4 text-muted-foreground" />
+                <span className="font-mono text-sm font-medium">
+                  {scholiumDetails?.accessId || "Loading..."}
+                </span>
+                <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={handleCopyAccessId}
+                    disabled={!scholiumDetails?.accessId}
+                    title="Copy Access ID"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Scholium Access</DialogTitle>
-                    <DialogDescription>
-                      Share this Access ID with others to invite them to your scholium
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 p-3 bg-muted rounded-md font-mono text-sm">
-                        {scholiumDetails?.accessId || "Loading..."}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleCopyAccessId}
-                        disabled={!scholiumDetails?.accessId}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    
-                    {scholiumDetails?.isHost && (
-                      <Button
-                        type="button"
-                        className="w-full"
-                        onClick={handleRenewAccessId}
-                        disabled={renewing}
-                      >
-                        {renewing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Renew Access ID
-                      </Button>
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  {scholiumDetails?.isHost && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={handleRenewAccessId}
+                      disabled={renewing}
+                      title="Renew Access ID"
+                    >
+                      {renewing ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RotateCw className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
 
               <Dialog open={openSettingsDialog} onOpenChange={setOpenSettingsDialog}>
                 <DialogTrigger asChild>

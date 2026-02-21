@@ -184,7 +184,7 @@ export function ScholiumsManagement({ scholiums: initialScholiums }: ScholiumsMa
                       <AlertDialogAction 
                         onClick={() => handleDelete(scholium.id)}
                         disabled={deleting}
-                        className="bg-destructive"
+                        className="bg-destructive text-white hover:bg-destructive/90 hover:text-white"
                       >
                         {deleting ? 'Deleting...' : 'Delete'}
                       </AlertDialogAction>

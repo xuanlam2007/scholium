@@ -258,7 +258,7 @@ export function ParticipantsSection({ scholiumId, members, currentUserId, isHost
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setMemberToRemove(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemoveMember} disabled={loading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={handleRemoveMember} disabled={loading} className="bg-destructive text-white hover:bg-destructive/90 hover:text-white">
               Remove
             </AlertDialogAction>
           </AlertDialogFooter>
