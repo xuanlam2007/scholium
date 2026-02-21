@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Settings,
@@ -35,6 +34,7 @@ import {
 } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import type { ScholiumMember } from '@/lib/scholium'
 import {
   deleteScholium,
@@ -515,7 +515,7 @@ export function ScholiumSettings({
             <Input
               id="scholium-name"
               value={newScholiumName}
-              onChange={(e) => setNewScholiumName(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewScholiumName(e.target.value)}
               placeholder="Enter scholium name..."
             />
           </div>
