@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Settings,
   Copy,
@@ -263,15 +261,15 @@ export function ScholiumSettings({
 
   return (
     <>
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Settings className="h-4 w-4" />
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Settings className="h-5 w-5" />
             Scholium Settings
-          </CardTitle>
-          <CardDescription>Manage your scholium configuration</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 max-h-[60vh] overflow-y-auto scrollbar-hide">
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">Manage your scholium configuration</p>
+        </div>
+        <div className="space-y-4 max-h-[65vh] overflow-y-auto scrollbar-hide pr-1">
           {error && (
             <div className="text-sm text-destructive bg-destructive/10 p-2 rounded">
               {error}
@@ -439,10 +437,10 @@ export function ScholiumSettings({
                 <Shield className="h-4 w-4" />
                 <span>Only the host can modify scholium settings</span>
               </div>
-            </div>
+            </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Delete Scholium Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

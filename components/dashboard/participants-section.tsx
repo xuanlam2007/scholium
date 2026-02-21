@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Users, Crown, Shield, UserMinus, LogOut } from 'lucide-react'
@@ -93,17 +92,15 @@ export function ParticipantsSection({ scholiumId, members, currentUserId, isHost
 
   return (
     <>
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Members
-            </CardTitle>
-            <Badge variant="secondary">{members.length}</Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Members
+          </h3>
+          <Badge variant="secondary">{members.length}</Badge>
+        </div>
+        <div className="space-y-3">
           {error && (
             <div className="text-sm text-destructive bg-destructive/10 p-2 rounded">
               {error}
@@ -165,7 +162,7 @@ export function ParticipantsSection({ scholiumId, members, currentUserId, isHost
               <h4 className="text-xs font-semibold text-muted-foreground mb-2">
                 Participants ({participants.length})
               </h4>
-              <div className="space-y-1 max-h-48 overflow-y-auto">
+              <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-hide">
                 {participants.map((member) => (
                   <div key={member.id} className="p-2 rounded hover:bg-muted/50 transition-colors flex items-center justify-between">
                     <div className="flex-1 min-w-0">
@@ -226,8 +223,8 @@ export function ParticipantsSection({ scholiumId, members, currentUserId, isHost
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Quit Scholium Dialog */}
       <AlertDialog open={quitDialogOpen} onOpenChange={setQuitDialogOpen}>
