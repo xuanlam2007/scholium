@@ -7,6 +7,8 @@ import { DashboardHeader } from "@/components/dashboard/header"
 import { AdminTabs } from "@/components/admin/admin-tabs"
 import { StatsCards } from "@/components/admin/stats-cards"
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminPage() {
   const user = await getSession()
 

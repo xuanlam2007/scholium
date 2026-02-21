@@ -8,6 +8,8 @@ import { UpcomingReminders } from "@/components/dashboard/upcoming-reminders"
 // ParticipantsSection with isHost prop for member management
 import { ParticipantsSection } from "@/components/dashboard/participants-section"
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   const user = await getSession()
 
@@ -50,12 +52,18 @@ export default async function DashboardPage() {
               canCreateSubject={canCreateSubject}
               isHost={isHost}
               scholiumId={scholiumId}
+              currentUserId={user.id}
               members={members}
             />
           </div>
           <aside className="space-y-6">
             <UpcomingReminders deadlines={upcomingDeadlines} />
-            <ParticipantsSection members={members} isHost={isHost} />
+            <ParticipantsSection 
+              scholiumId={scholiumId}
+              members={members} 
+              currentUserId={user.id}
+              isHost={isHost} 
+            />
           </aside>
         </div>
       </main>

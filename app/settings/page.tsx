@@ -3,6 +3,8 @@ import { getSession } from '@/lib/auth'
 import { getCurrentScholiumId } from '@/app/actions/scholium'
 import { SettingsClient } from '@/components/settings/settings-client'
 
+export const dynamic = 'force-dynamic'
+
 export default async function SettingsPage() {
   const user = await getSession()
   
