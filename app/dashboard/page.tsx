@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation"
 import { getSession } from "@/lib/auth"
 import { getHomework, getSubjects, getUpcomingDeadlines } from "@/app/actions/homework"
-import { getCurrentScholiumId, getScholiumMembers, getScholiumDetails } from "@/app/actions/scholium"
+import { getCurrentScholiumId, getScholiumMembers } from "@/app/actions/scholium"
 import { DashboardHeader } from "@/components/dashboard/header"
 import { HomeworkContent } from "@/components/dashboard/homework-content"
 import { UpcomingReminders } from "@/components/dashboard/upcoming-reminders"
 // ParticipantsSection with isHost prop for member management
 import { ParticipantsSection } from "@/components/dashboard/participants-section"
-import { ScholiumSettings } from "@/components/dashboard/scholium-settings"
 
 export const dynamic = 'force-dynamic'
 
@@ -27,15 +26,12 @@ export default async function DashboardPage() {
     redirect("/scholiums")
   }
 
-  const [homework, subjects, upcomingDeadlines, members, scholiumDetailsResult] = await Promise.all([
+  const [homework, subjects, upcomingDeadlines, members] = await Promise.all([
     getHomework(),
     getSubjects(),
     getUpcomingDeadlines(),
     getScholiumMembers(scholiumId),
-    getScholiumDetails(scholiumId),
   ])
-
-  const scholiumDetails = scholiumDetailsResult.success ? scholiumDetailsResult.data : null
 
   // Check if user is a member and if they're a host
   const userMember = members.find((m) => m.user_id === user.id)
@@ -68,16 +64,6 @@ export default async function DashboardPage() {
               currentUserId={user.id}
               isHost={isHost} 
             />
-            {scholiumDetails && (
-              <ScholiumSettings
-                scholiumId={scholiumId}
-                scholiumName={scholiumDetails.name}
-                accessId={scholiumDetails.accessId}
-                members={members}
-                currentUserId={user.id}
-                isHost={isHost}
-              />
-            )}
           </aside>
         </div>
       </main>

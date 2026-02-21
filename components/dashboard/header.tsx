@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { signOut } from "@/app/actions/auth"
-import { getScholiumDetails } from "@/app/actions/scholium"
+import { getScholiumDetails, renewScholiumAccessId, getScholiumMembers } from "@/app/actions/scholium"
 import type { User } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,8 +15,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { BookOpen, LogOut, Settings, Shield, Grid3X3 } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { BookOpen, LogOut, Settings, Shield, Grid3X3, Copy, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
+import { ScholiumSettings } from "@/components/dashboard/scholium-settings"
 
 interface ScholiumDetails {
   name: string;
@@ -31,9 +41,15 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ user, scholiumId }: DashboardHeaderProps) {
   const [scholiumDetails, setScholiumDetails] = useState<ScholiumDetails | null>(null)
+  const [members, setMembers] = useState<any[]>([])
+  const [openAccessDialog, setOpenAccessDialog] = useState(false)
+  const [openSettingsDialog, setOpenSettingsDialog] = useState(false)
+  const [renewing, setRenewing] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     loadScholiumDetails()
+    loadMembers()
   }, [scholiumId])
 
   async function loadScholiumDetails() {
@@ -45,6 +61,34 @@ export function DashboardHeader({ user, scholiumId }: DashboardHeaderProps) {
         isHost: result.data.isHost,
       })
     }
+  }
+
+  async function loadMembers() {
+    const result = await getScholiumMembers(scholiumId)
+    setMembers(result)
+  }
+
+  async function handleCopyAccessId() {
+    if (scholiumDetails?.accessId) {
+      await navigator.clipboard.writeText(scholiumDetails.accessId)
+      toast({
+        title: "Access ID copied!",
+        description: "Share this ID with others to invite them.",
+      })
+    }
+  }
+
+  async function handleRenewAccessId() {
+    setRenewing(true)
+    const result = await renewScholiumAccessId(scholiumId)
+    if (result.success) {
+      await loadScholiumDetails()
+      toast({
+        title: "Access ID renewed!",
+        description: "A new access ID has been generated.",
+      })
+    }
+    setRenewing(false)
   }
 
   const initials = user.name
@@ -70,12 +114,78 @@ export function DashboardHeader({ user, scholiumId }: DashboardHeaderProps) {
 
           {/* Admin's view */}
           {user.role !== "admin" && (
-            <Link href="/scholiums">
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                <Grid3X3 className="h-4 w-4" />
-                Scholiums
-              </Button>
-            </Link>
+            <>
+              <Dialog open={openAccessDialog} onOpenChange={setOpenAccessDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                    <Grid3X3 className="h-4 w-4" />
+                    Access ID
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Scholium Access</DialogTitle>
+                    <DialogDescription>
+                      Share this Access ID with others to invite them to your scholium
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 p-3 bg-muted rounded-md font-mono text-sm">
+                        {scholiumDetails?.accessId || "Loading..."}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCopyAccessId}
+                        disabled={!scholiumDetails?.accessId}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    {scholiumDetails?.isHost && (
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={handleRenewAccessId}
+                        disabled={renewing}
+                      >
+                        {renewing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Renew Access ID
+                      </Button>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={openSettingsDialog} onOpenChange={setOpenSettingsDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  {scholiumDetails && (
+                    <ScholiumSettings
+                      scholiumId={scholiumId}
+                      scholiumName={scholiumDetails.name}
+                      accessId={scholiumDetails.accessId}
+                      members={members}
+                      currentUserId={user.id}
+                      isHost={scholiumDetails.isHost}
+                    />
+                  )}
+                </DialogContent>
+              </Dialog>
+
+              <Link href="/scholiums">
+                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                  <Grid3X3 className="h-4 w-4" />
+                  Scholiums
+                </Button>
+              </Link>
+            </>
           )}
 
 
