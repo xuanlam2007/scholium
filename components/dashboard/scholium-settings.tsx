@@ -34,6 +34,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import type { ScholiumMember } from '@/lib/scholium'
 import {
   deleteScholium,
