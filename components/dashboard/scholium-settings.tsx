@@ -437,7 +437,7 @@ export function ScholiumSettings({
                 <Shield className="h-4 w-4" />
                 <span>Only the host can modify scholium settings</span>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>
