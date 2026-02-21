@@ -271,7 +271,7 @@ export function ScholiumSettings({
           </CardTitle>
           <CardDescription>Manage your scholium configuration</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 max-h-[60vh] overflow-y-auto scrollbar-hide">
           {error && (
             <div className="text-sm text-destructive bg-destructive/10 p-2 rounded">
               {error}
