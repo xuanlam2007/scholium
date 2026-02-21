@@ -4,7 +4,14 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
+<<<<<<< HEAD
 // Checks if the current user is a member of the scholium.
+=======
+/**
+ * Hook to check if current user is still a member of the scholium
+ * Redirects to /scholiums if user is kicked or scholium is deleted
+ */
+>>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
 export function useMemberCheck(scholiumId: number | null, userId: string) {
   const router = useRouter()
   const hasRedirectedRef = useRef(false)
@@ -21,7 +28,11 @@ export function useMemberCheck(scholiumId: number | null, userId: string) {
       setTimeout(() => router.refresh(), 100)
     }
 
+<<<<<<< HEAD
     // Check membership
+=======
+    // Check membership status
+>>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
     const checkMembership = async () => {
       const { data } = await supabase
         .from('scholium_members')
@@ -32,11 +43,20 @@ export function useMemberCheck(scholiumId: number | null, userId: string) {
 
       return !!data
     }
+<<<<<<< HEAD
+=======
+
+    // Initial check
+>>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
     checkMembership().then(isMember => {
       if (!isMember) redirect()
     })
 
+<<<<<<< HEAD
     // listen to all changes in scholium_members
+=======
+    // Subscribe to realtime changes - listen to ALL changes in scholium_members
+>>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
     const channel = supabase
       .channel(`member-check-${scholiumId}-${userId}`)
       .on(
@@ -47,6 +67,11 @@ export function useMemberCheck(scholiumId: number | null, userId: string) {
           table: 'scholium_members',
         },
         async (payload) => {
+<<<<<<< HEAD
+=======
+          // On any member change, verify current user is still a member
+          // This catches DELETE, UPDATE, and INSERT events
+>>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
           if (payload.eventType === 'DELETE' || payload.eventType === 'UPDATE') {
             const isMember = await checkMembership()
             if (!isMember) {

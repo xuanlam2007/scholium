@@ -49,8 +49,13 @@ export async function signUp(formData: FormData) {
 
   // Check if email confirmation is required
   if (authData.session) {
+<<<<<<< HEAD
     // Log in immediately (disable email confirmation)
     // Database automatically creates the user profile
+=======
+    // User is logged in immediately (email confirmation disabled)
+    // The database trigger automatically creates the user profile
+>>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
     redirect("/scholiums")
   } else {
     // Email confirmation required

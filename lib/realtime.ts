@@ -143,5 +143,10 @@ export function subscribeToScholiumChanges(
 }
 
 export async function broadcastChange(scholiumId: number, type: RealtimeChangeType): Promise<void> {
+<<<<<<< HEAD
   // ko co gi de lam o day, supabase tu dong phat hien thay doi va gui den client
+=======
+  // With Supabase Realtime, database changes automatically trigger subscriptions
+  // This function is now a no-op but kept for compatibility
+>>>>>>> 767a57c23f3d2591e813360076be537055b87a8b
 }
