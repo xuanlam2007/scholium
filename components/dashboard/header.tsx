@@ -166,6 +166,9 @@ export function DashboardHeader({ user, scholiumId }: DashboardHeaderProps) {
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader className="sr-only">
+                    <DialogTitle>Scholium Settings</DialogTitle>
+                  </DialogHeader>
                   {scholiumDetails && (
                     <ScholiumSettings
                       scholiumId={scholiumId}
@@ -174,6 +177,10 @@ export function DashboardHeader({ user, scholiumId }: DashboardHeaderProps) {
                       members={members}
                       currentUserId={user.id}
                       isHost={scholiumDetails.isHost}
+                      onSettingsChange={() => {
+                        loadScholiumDetails()
+                        loadMembers()
+                      }}
                     />
                   )}
                 </DialogContent>

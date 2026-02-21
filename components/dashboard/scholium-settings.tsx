@@ -54,6 +54,7 @@ interface ScholiumSettingsProps {
   })[]
   currentUserId: string
   isHost: boolean
+  onSettingsChange?: () => void
 }
 
 export function ScholiumSettings({
@@ -63,6 +64,7 @@ export function ScholiumSettings({
   members,
   currentUserId,
   isHost,
+  onSettingsChange,
 }: ScholiumSettingsProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -93,6 +95,7 @@ export function ScholiumSettings({
         title: 'Access ID renewed!',
         description: 'A new access ID has been generated.',
       })
+      onSettingsChange?.()
       router.refresh()
     } else {
       setError(result.error || 'Failed to renew access ID')
@@ -138,6 +141,7 @@ export function ScholiumSettings({
         title: 'Host transferred',
         description: 'The host role has been transferred successfully.',
       })
+      onSettingsChange?.()
       router.refresh()
       setTransferDialogOpen(false)
       setSelectedNewHost('')
@@ -310,7 +314,7 @@ export function ScholiumSettings({
                   size="sm"
                   onClick={() => setDeleteDialogOpen(true)}
                   disabled={loading}
-                  className="w-full justify-start"
+                  className="w-full justify-start text-white hover:text-white"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Scholium
@@ -347,7 +351,7 @@ export function ScholiumSettings({
             <AlertDialogAction
               onClick={handleDeleteScholium}
               disabled={loading}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-white hover:bg-destructive/90 hover:text-white"
             >
               Delete
             </AlertDialogAction>
@@ -434,7 +438,7 @@ export function ScholiumSettings({
             <AlertDialogAction
               onClick={handleClearAllData}
               disabled={loading}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-white hover:bg-destructive/90 hover:text-white"
             >
               Remove All Data
             </AlertDialogAction>
