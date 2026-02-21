@@ -41,6 +41,8 @@ import {
   deleteScholium,
   transferHost,
   renewScholiumAccessId,
+  renameScholium,
+  clearAllScholiumData,
 } from '@/app/actions/scholium'
 import { useToast } from '@/hooks/use-toast'
 
@@ -157,21 +159,50 @@ export function ScholiumSettings({
   }
 
   const handleRenameScholium = async () => {
-    // TODO: Implement rename scholium action
-    toast({
-      title: 'Coming soon',
-      description: 'Rename scholium feature will be available soon.',
-    })
-    setRenameDialogOpen(false)
+    if (!newScholiumName.trim()) return
+    setLoading(true)
+    setError(null)
+    const result = await renameScholium(scholiumId, newScholiumName)
+    if (result.success) {
+      toast({
+        title: 'Scholium renamed',
+        description: 'The scholium name has been updated successfully.',
+      })
+      onSettingsChange?.()
+      router.refresh()
+      setRenameDialogOpen(false)
+    } else {
+      setError(result.error || 'Failed to rename scholium')
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to rename scholium',
+        variant: 'destructive',
+      })
+    }
+    setLoading(false)
   }
 
   const handleClearAllData = async () => {
-    // TODO: Implement clear all data action
-    toast({
-      title: 'Coming soon',
-      description: 'Clear all data feature will be available soon.',
-    })
-    setClearDataDialogOpen(false)
+    setLoading(true)
+    setError(null)
+    const result = await clearAllScholiumData(scholiumId)
+    if (result.success) {
+      toast({
+        title: 'Data cleared',
+        description: 'All homework and subjects have been removed.',
+      })
+      onSettingsChange?.()
+      router.refresh()
+      setClearDataDialogOpen(false)
+    } else {
+      setError(result.error || 'Failed to clear data')
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to clear data',
+        variant: 'destructive',
+      })
+    }
+    setLoading(false)
   }
 
   return (
@@ -245,28 +276,6 @@ export function ScholiumSettings({
                 </Button>
                 <p className="text-xs text-muted-foreground">
                   Change the display name of your scholium
-                </p>
-              </div>
-
-              {/* Default Join Permissions Section */}
-              <div className="space-y-2 pt-2 border-t">
-                <h4 className="text-sm font-semibold text-foreground">Default Join Permissions</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Can add homework</span>
-                    <Button variant="outline" size="sm" disabled>
-                      Coming soon
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Can create subjects</span>
-                    <Button variant="outline" size="sm" disabled>
-                      Coming soon
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Set default permissions for new members joining the scholium
                 </p>
               </div>
 

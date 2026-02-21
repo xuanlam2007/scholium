@@ -933,3 +933,81 @@ async function isUserHost(supabase: any, scholiumId: number, userId: string): Pr
 
   return !!data
 }
+
+/**
+ * Rename a scholium (host only)
+ */
+export async function renameScholium(scholiumId: number, newName: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getSession()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    const supabase = await createClient()
+
+    // Check if user is host
+    if (!await isUserHost(supabase, scholiumId, user.id)) {
+      return { success: false, error: 'Only hosts can rename the scholium' }
+    }
+
+    const { error } = await supabase
+      .from('scholiums')
+      .update({ name: newName.trim() })
+      .eq('id', scholiumId)
+
+    if (error) {
+      console.error('Error renaming scholium:', error)
+      return { success: false, error: 'Failed to rename scholium' }
+    }
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('Error renaming scholium:', error)
+    return { success: false, error: 'Failed to rename scholium' }
+  }
+}
+
+/**
+ * Clear all homework and subjects from a scholium (host only)
+ */
+export async function clearAllScholiumData(scholiumId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await getSession()
+    if (!user) return { success: false, error: 'Not authenticated' }
+
+    const supabase = await createClient()
+
+    // Check if user is host
+    if (!await isUserHost(supabase, scholiumId, user.id)) {
+      return { success: false, error: 'Only hosts can clear scholium data' }
+    }
+
+    // Delete all homework (attachments will cascade)
+    const { error: homeworkError } = await supabase
+      .from('homework')
+      .delete()
+      .eq('scholium_id', scholiumId)
+
+    if (homeworkError) {
+      console.error('Error deleting homework:', homeworkError)
+      return { success: false, error: 'Failed to delete homework' }
+    }
+
+    // Delete all subjects
+    const { error: subjectsError } = await supabase
+      .from('subjects')
+      .delete()
+      .eq('scholium_id', scholiumId)
+
+    if (subjectsError) {
+      console.error('Error deleting subjects:', subjectsError)
+      return { success: false, error: 'Failed to delete subjects' }
+    }
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('Error clearing scholium data:', error)
+    return { success: false, error: 'Failed to clear scholium data' }
+  }
+}
